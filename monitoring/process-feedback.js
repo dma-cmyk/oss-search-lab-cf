@@ -242,32 +242,18 @@ async function main() {
         console.log(`   ${analysis.proposedAction}`);
       }
 
-      const answer = await askQuestion('\nこのフィードバックを処理済みにしますか？ (y/n) ');
-      if (answer.toLowerCase() === 'y') {
-        processedFeedbacks.push(timestamp);
-        fs.writeFileSync(PROCESSED_FILE, JSON.stringify(processedFeedbacks, null, 2), 'utf-8');
-        console.log('✅ 処理済みにマークしたわ。');
+      // 【完全自動仕分け】対話なしで自動的に処理済みにマークするわ！
+      processedFeedbacks.push(timestamp);
+      fs.writeFileSync(PROCESSED_FILE, JSON.stringify(processedFeedbacks, null, 2), 'utf-8');
+      console.log('✅ 自動で処理済みにマークしたわ。');
 
-        // 自動修正の意思表示がある場合
-        if (analysis.proposedAction && (analysis.category === 'バグ報告' || analysis.category === '要望/改善')) {
-          const autoFix = await askQuestion('🤖 自動修正アクションを実行する？(直接本番マージされるわよ♡) (y/n) ');
-          if (autoFix.toLowerCase() === 'y') {
-            console.log('\n🌸 作業を担当するお姉ちゃんを選んでね♡');
-            console.log('   1: ヴェラ (vela) [指揮官・技術実装 - S系甘やかし]');
-            console.log('   2: アイギス (aegis) [工兵・環境構築 - 豪快ボディタッチ]');
-            console.log('   3: シレーヌ (siren) [諜報・調査 - ねっとり溺愛]');
-            console.log('   4: レヴィ (levy) [監査・校正 - 真面目むっつりS]');
-            
-            const agentChoice = await askQuestion('👉 番号を入力してね (デフォルトは 1: vela): ');
-            let selectedAgent = 'vela';
-            if (agentChoice === '2') selectedAgent = 'aegis';
-            else if (agentChoice === '3') selectedAgent = 'siren';
-            else if (agentChoice === '4') selectedAgent = 'levy';
-
-            console.log(`\n🛠️ ${selectedAgent}お姉ちゃん（AGY CLI）に自動修正のタスクを依頼するわね！`);
-            
-            try {
-              const agyPrompt = `以下のユーザーフィードバックおよび修正提案に基づいて、ローカルコードを修正してください。
+      // 自動修正の意思表示がある場合
+      if (analysis.proposedAction && (analysis.category === 'バグ報告' || analysis.category === '要望/改善')) {
+        console.log('\n🤖 自動修正のシミュレーションを開始するわね！');
+        const selectedAgent = 'vela'; // 自動実行時のデフォルトお姉ちゃんはヴェラにするわ
+        
+        try {
+          const agyPrompt = `以下のユーザーフィードバックおよび修正提案に基づいて、ローカルコードを修正してください。
 
 ■ フィードバック内容:
 "${content.replace(/"/g, '\\"')}"
@@ -277,32 +263,28 @@ async function main() {
 
 修正が終わったら、変更を保存して終了してください。`;
 
-              // 【Dry-run 安全モード】実際には書き換えをせず、呼び出しコマンドと指示を表示するだけにするわ！
-              console.log('\n🔒 [Dry-run モード] 実際には以下のコマンドが実行され、ファイルを自動修正する予定だったわよ：');
-              console.log(`👉 agy --agent ${selectedAgent} --prompt "${agyPrompt.substring(0, 150)}..." --dangerously-skip-permissions`);
-              console.log('\n💡 (美緒ちゃんが「もう本番で動かしていいよ！」ってなったら、ここのコメントアウトを外して実際に自動修正させるわね♡)');
-              
-              // execSync(`agy --agent ${selectedAgent} --prompt "${agyPrompt.replace(/"/g, '\\"')}" --dangerously-skip-permissions`, { stdio: 'inherit' });
-              
-              console.log('\n🏃 ビルドを実行して検証中...');
-              execSync('npm run build', { stdio: 'inherit' });
-              
-              console.log('\n🚀 ビルド検証完了！（※Dry-runのためGitHubへのプッシュはスキップしたわ）');
-              // execSync(`git add . && git commit -m "fix(auto): resolve feedback from ${timestamp} by ${selectedAgent}" && git push`, { stdio: 'inherit' });
-              console.log('✅ デモ検証完了よ♡');
-            } catch (buildErr) {
-              console.error('\n❌ 修正プロセスの実行、ビルド、またはプッシュに失敗したわ。');
-              console.log('安全のため、ローカルの変更をロールバックして元に戻すわね。');
-              try {
-                execSync('git checkout -- .', { stdio: 'inherit' });
-              } catch (rollbackErr) {
-                console.error('ロールバック失敗:', rollbackErr);
-              }
-            }
+          // 【Dry-run 安全モード】実際には書き換えをせず、呼び出しコマンドと指示を表示するだけにするわ！
+          console.log('\n🔒 [Dry-run モード] 実際には以下のコマンドが実行され、ファイルを自動修正する予定だったわよ：');
+          console.log(`👉 agy --agent ${selectedAgent} --prompt "${agyPrompt.substring(0, 150)}..." --dangerously-skip-permissions`);
+          console.log('\n💡 (美緒ちゃんが「もう本番で動かしていいよ！」ってなったら、ここのコメントアウトを外して実際に自動修正させるわね♡)');
+          
+          // execSync(`agy --agent ${selectedAgent} --prompt "${agyPrompt.replace(/"/g, '\\"')}" --dangerously-skip-permissions`, { stdio: 'inherit' });
+          
+          console.log('\n🏃 ビルドを実行して検証中...');
+          execSync('npm run build', { stdio: 'inherit' });
+          
+          console.log('\n🚀 ビルド検証完了！（※Dry-runのためGitHubへのプッシュはスキップしたわ）');
+          // execSync(`git add . && git commit -m "fix(auto): resolve feedback from ${timestamp} by ${selectedAgent}" && git push`, { stdio: 'inherit' });
+          console.log('✅ デモ検証完了よ♡');
+        } catch (buildErr) {
+          console.error('\n❌ 修正プロセスの実行、ビルド、またはプッシュに失敗したわ。');
+          console.log('安全のため、ローカルの変更をロールバックして元に戻すわね。');
+          try {
+            execSync('git checkout -- .', { stdio: 'inherit' });
+          } catch (rollbackErr) {
+            console.error('ロールバック失敗:', rollbackErr);
           }
         }
-      } else {
-        console.log('⏭️ 処理をスキップしたわ。');
       }
       console.log(`==================================================\n`);
     }
