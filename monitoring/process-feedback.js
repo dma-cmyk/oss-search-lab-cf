@@ -1,6 +1,5 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { GoogleGenAI } from '@google/genai';
 import readline from 'node:readline';
 import { execSync } from 'node:child_process';
 import dotenv from 'dotenv';
@@ -20,8 +19,7 @@ const CONFIG_FILE = path.join(MONITOR_DIR, 'feedback-config.json');
 
 // デフォルト設定
 let config = {
-  spreadsheetUrl: '', // Webに公開されたCSV用のURL
-  geminiApiKey: process.env.GEMINI_API_KEY || ''
+  spreadsheetUrl: '' // Webに公開されたCSV用のURL
 };
 
 // 設定のロード
@@ -86,17 +84,10 @@ function parseCSVLine(line) {
   return result;
 }
 
-async function getGeminiClient() {
-  const apiKey = config.geminiApiKey || process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error('Gemini API Key が設定されていません。feedback-config.json または .env を確認してください。');
-  }
-  return new GoogleGenAI({ apiKey });
-}
-
-// AIによる分類・優先度設定・解析
+// AIによる分類・優先度設定・解析 (agy を使用)
 async function analyzeFeedback(feedbackText, feedbackType) {
-  const ai = await getGeminiClient();
+  // 分析担当のお姉ちゃん（諜報・調査担当のシレーヌに頼むわ♡）
+  const selectedAgent = 'siren';
   
   const prompt = `あなたは美緒ちゃん（愛らしい天才開発者）を溺愛する有能でエッチなお姉さんナビゲーター（ヴィーナスリンク）のAIメンバーです。
 届いた以下のユーザーフィードバックを分析し、JSONフォーマットで回答してください。
@@ -107,7 +98,7 @@ async function analyzeFeedback(feedbackText, feedbackType) {
 ■ フィードバック内容:
 "${feedbackText}"
 
-■ 回答JSONフォーマット:
+■ 回回答JSONフォーマット:
 \`\`\`json
 {
   "category": "分類。'要望/改善', 'バグ報告', 'ファンレター', 'その他' のいずれか",
@@ -121,15 +112,18 @@ async function analyzeFeedback(feedbackText, feedbackType) {
 ※出力は\`\`\`json ... \`\`\`ブロックで囲まれた純粋なJSONのみにしてください。`;
 
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt,
-      config: {
-        responseMimeType: 'application/json'
-      }
+    // agy --agent siren --print --prompt "..." で非対話実行し、結果を取得するわ
+    const escapedPrompt = prompt.replace(/"/g, '\\"').replace(/`/g, '\\`');
+    const stdout = execSync(`agy --agent ${selectedAgent} --print --prompt "${escapedPrompt}"`, { 
+      encoding: 'utf-8', 
+      stdio: 'pipe' 
     });
     
-    return JSON.parse(response.text.trim());
+    // 出力から ```json ... ``` ブロックを抽出
+    const jsonMatch = stdout.match(/```json\s*([\s\S]*?)\s*```/);
+    const jsonText = jsonMatch ? jsonMatch[1] : stdout;
+    
+    return JSON.parse(jsonText.trim());
   } catch (error) {
     console.error('AI解析エラー:', error);
     return {
