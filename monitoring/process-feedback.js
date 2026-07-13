@@ -142,30 +142,54 @@ async function analyzeFeedback(feedbackText) {
 async function main() {
   console.log('\n💠 —————— ヴィーナス・フィードバック自動仕分け (専用監視フォルダ版) —————— 💠');
   
+  let csvText = '';
+  let usingDemo = false;
+
   if (!config.spreadsheetUrl) {
-    console.log('\n💡 まずはスプレッドシートのCSV公開URLを設定してね。');
-    console.log('Googleスプレッドシートで「ファイル」 ➔ 「共有」 ➔ 「ウェブに公開」を選択し、');
-    console.log('シートを選択の上、フォーマットを「カンマ区切り値 (.csv)」にして公開し、そのURLを貼り付けてね。');
+    console.log('\n💡 スプレッドシートのCSV公開URLがまだ設定されていないわ。');
+    console.log('   1: スプレッドシートの公開URLを入力する');
+    console.log('   2: ローカルのテスト用CSVファイル (test-feedbacks.csv) を読み込んでデモを実行する');
     
-    const urlInput = await askQuestion('\nCSVの公開URLを入力してください: ');
-    if (urlInput.trim()) {
-      config.spreadsheetUrl = urlInput.trim();
-      fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2), 'utf-8');
-      console.log('✅ URLを保存したわ！');
+    const choice = await askQuestion('\nどちらか選んでね (1 または 2): ');
+    
+    if (choice === '2') {
+      usingDemo = true;
+      const demoFile = path.join(MONITOR_DIR, 'test-feedbacks.csv');
+      if (fs.existsSync(demoFile)) {
+        csvText = fs.readFileSync(demoFile, 'utf-8');
+        console.log('📝 ローカルのテスト用CSVを読み込んだわ！');
+      } else {
+        console.log('❌ テスト用CSVファイルが見つかりません。');
+        rl.close();
+        return;
+      }
     } else {
-      console.log('❌ URLが入力されなかったため終了するわ。');
-      rl.close();
-      return;
+      console.log('\nGoogleスプレッドシートで「ファイル」 ➔ 「共有」 ➔ 「ウェブに公開」を選択し、');
+      console.log('シートを選択の上、フォーマットを「カンマ区切り値 (.csv)」にして公開し、そのURLを貼り付けてね。');
+      const urlInput = await askQuestion('\nCSVの公開URLを入力してください: ');
+      if (urlInput.trim()) {
+        config.spreadsheetUrl = urlInput.trim();
+        fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2), 'utf-8');
+        console.log('✅ URLを保存したわ！');
+      } else {
+        console.log('❌ URLが入力されなかったため終了するわ。');
+        rl.close();
+        return;
+      }
     }
   }
 
   try {
-    console.log('\n📡 スプレッドシートからフィードバックデータを取得中...');
-    const res = await fetch(config.spreadsheetUrl);
-    if (!res.ok) throw new Error(`HTTPエラー: ${res.status}`);
-    
-    const csvText = await res.text();
-    const rows = parseCSV(csvText);
+    let rows = [];
+    if (usingDemo) {
+      rows = parseCSV(csvText);
+    } else {
+      console.log('\n📡 スプレッドシートからフィードバックデータを取得中...');
+      const res = await fetch(config.spreadsheetUrl);
+      if (!res.ok) throw new Error(`HTTPエラー: ${res.status}`);
+      csvText = await res.text();
+      rows = parseCSV(csvText);
+    }
     
     if (rows.length === 0) {
       console.log('✨ フィードバックはまだ1件もないみたいよ。');
