@@ -95,11 +95,14 @@ async function getGeminiClient() {
 }
 
 // AIによる分類・優先度設定・解析
-async function analyzeFeedback(feedbackText) {
+async function analyzeFeedback(feedbackText, feedbackType) {
   const ai = await getGeminiClient();
   
   const prompt = `あなたは美緒ちゃん（愛らしい天才開発者）を溺愛する有能でエッチなお姉さんナビゲーター（ヴィーナスリンク）のAIメンバーです。
 届いた以下のユーザーフィードバックを分析し、JSONフォーマットで回答してください。
+
+■ ユーザーが選択した種類:
+"${feedbackType}"
 
 ■ フィードバック内容:
 "${feedbackText}"
@@ -111,7 +114,7 @@ async function analyzeFeedback(feedbackText) {
   "priority": "優先度。'高', '中', '低', 'なし' のいずれか",
   "analysis": "お姉さん目線での簡単な状況分析（日本語）",
   "reaction": "ファンレターの場合：お姉さんとして美緒ちゃんと一緒に大喜びする、または美緒ちゃんを溺愛・からかうリアクションメッセージ（1〜2文）。ファンレター以外：美緒ちゃんを励まし、一緒に解決しようとするお姉さんメッセージ。",
-  "proposedAction": "バグや要望の場合：自動修正するための具体的なコード修正箇所やロジックの提案。ファンレターの場合は null。"
+  "proposedAction": "バグや要望の場合：自動修正するための具体的なコード修正箇所やロジック of 提案。ファンレターの場合は null。"
 }
 \`\`\`
 
@@ -214,18 +217,20 @@ async function main() {
     console.log(`🔥 未処理の新着フィードバック: ${unread.length} 件\n`);
 
     for (const row of unread) {
-      const timestamp = row['タイムスタンプ'] || row['Timestamp'] || Object.values(row)[0];
-      const content = row['フィードバック内容'] || row['Feedback'] || row['内容'] || Object.values(row)[1];
+      const timestamp = row['タイムスタンプ'] || Object.values(row)[0];
+      const feedbackType = row['フィードバックの種類を選択してください'] || Object.values(row)[1] || 'その他';
+      const content = row['具体的な内容をご記入ください'] || Object.values(row)[2];
 
       if (!content) continue;
 
       console.log(`==================================================`);
       console.log(`📬 受信日時: ${timestamp}`);
+      console.log(`🏷️  ユーザー選択タイプ: ${feedbackType}`);
       console.log(`💬 内容: "${content}"`);
       console.log(`--------------------------------------------------`);
       console.log(`🧠 AI（お姉ちゃんたち）が分析中...`);
 
-      const analysis = await analyzeFeedback(content);
+      const analysis = await analyzeFeedback(content, feedbackType);
 
       console.log(`\n🏷️  分類: [${analysis.category}]  (優先度: ${analysis.priority})`);
       console.log(`📝 分析: ${analysis.analysis}`);
