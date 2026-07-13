@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
-    "build": "vite build && esbuild server.ts --bundle --platform=node --format=esm --sourcemap --outfile=dist/_worker.js --external:cloudflare:node --external:cloudflare:workers --external:fs --external:path --external:node:fs --external:node:path --external:node:child_process --external:child_process --external:os --external:node:os --external:stream --external:node:stream --banner:js=\"import { createRequire } from 'node:module'; const require = createRequire('/index.js');\"",
+    "build": "vite build && esbuild server.ts --bundle --platform=node --format=esm --sourcemap --outfile=dist/_worker.js --external:cloudflare:node --external:cloudflare:workers --external:fs --external:path --external:node:fs --external:node:path --external:node:child_process --external:child_process --external:os --external:node:os --external:stream --external:node:stream --banner:js=\"import * as nodeModule from 'node:module'; const require = nodeModule.createRequire('/index.js');\"",
     "start": "node dist/_worker.js",
     "dev:cf": "npm run build && wrangler pages dev ./dist --compatibility-flag=nodejs_compat",
     "clean": "rm -rf dist",
