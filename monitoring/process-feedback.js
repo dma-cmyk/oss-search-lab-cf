@@ -16,6 +16,7 @@ if (!fs.existsSync(MONITOR_DIR)) {
 
 const PROCESSED_FILE = path.join(MONITOR_DIR, 'processed-feedbacks.json');
 const CONFIG_FILE = path.join(MONITOR_DIR, 'feedback-config.json');
+const CLASSIFIED_FILE = path.join(MONITOR_DIR, 'classified-feedbacks.json');
 
 // デフォルト設定
 let config = {
@@ -239,7 +240,28 @@ async function main() {
       // 【完全自動仕分け】対話なしで自動的に処理済みにマークするわ！
       processedFeedbacks.push(timestamp);
       fs.writeFileSync(PROCESSED_FILE, JSON.stringify(processedFeedbacks, null, 2), 'utf-8');
-      console.log('✅ 自動で処理済みにマークしたわ。');
+      
+      // 仕分けた結果を履歴ファイルに綺麗に追記保存するわ♡
+      let classifiedList = [];
+      if (fs.existsSync(CLASSIFIED_FILE)) {
+        try {
+          classifiedList = JSON.parse(fs.readFileSync(CLASSIFIED_FILE, 'utf-8'));
+        } catch (e) {
+          classifiedList = [];
+        }
+      }
+      classifiedList.push({
+        timestamp,
+        userSelectType: feedbackType,
+        content,
+        category: analysis.category,
+        priority: analysis.priority,
+        analysis: analysis.analysis,
+        reaction: analysis.reaction,
+        proposedAction: analysis.proposedAction
+      });
+      fs.writeFileSync(CLASSIFIED_FILE, JSON.stringify(classifiedList, null, 2), 'utf-8');
+      console.log('✅ 自動で処理済みにマークし、仕分け結果を履歴ファイルに保存したわ。');
 
       // 自動修正の意思表示がある場合
       if (analysis.proposedAction && (analysis.category === 'バグ報告' || analysis.category === '要望/改善')) {
