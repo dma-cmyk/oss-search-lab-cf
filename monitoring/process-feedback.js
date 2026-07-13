@@ -277,15 +277,19 @@ async function main() {
 
 修正が終わったら、変更を保存して終了してください。`;
 
-              // agy cli を呼び出し、選ばれたエージェントで自動実行させる (--dangerously-skip-permissions でYOLOモード)
-              execSync(`agy --agent ${selectedAgent} --prompt "${agyPrompt.replace(/"/g, '\\"')}" --dangerously-skip-permissions`, { stdio: 'inherit' });
+              // 【Dry-run 安全モード】実際には書き換えをせず、呼び出しコマンドと指示を表示するだけにするわ！
+              console.log('\n🔒 [Dry-run モード] 実際には以下のコマンドが実行され、ファイルを自動修正する予定だったわよ：');
+              console.log(`👉 agy --agent ${selectedAgent} --prompt "${agyPrompt.substring(0, 150)}..." --dangerously-skip-permissions`);
+              console.log('\n💡 (美緒ちゃんが「もう本番で動かしていいよ！」ってなったら、ここのコメントアウトを外して実際に自動修正させるわね♡)');
+              
+              // execSync(`agy --agent ${selectedAgent} --prompt "${agyPrompt.replace(/"/g, '\\"')}" --dangerously-skip-permissions`, { stdio: 'inherit' });
               
               console.log('\n🏃 ビルドを実行して検証中...');
               execSync('npm run build', { stdio: 'inherit' });
               
-              console.log('\n🚀 テスト/ビルド成功！GitHubにコミット＆プッシュ（本番反映）するわね。');
-              execSync(`git add . && git commit -m "fix(auto): resolve feedback from ${timestamp} by ${selectedAgent}" && git push`, { stdio: 'inherit' });
-              console.log('✅ 自動デプロイに成功したわ！（※本番反映）');
+              console.log('\n🚀 ビルド検証完了！（※Dry-runのためGitHubへのプッシュはスキップしたわ）');
+              // execSync(`git add . && git commit -m "fix(auto): resolve feedback from ${timestamp} by ${selectedAgent}" && git push`, { stdio: 'inherit' });
+              console.log('✅ デモ検証完了よ♡');
             } catch (buildErr) {
               console.error('\n❌ 修正プロセスの実行、ビルド、またはプッシュに失敗したわ。');
               console.log('安全のため、ローカルの変更をロールバックして元に戻すわね。');
