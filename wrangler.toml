@@ -5,8 +5,4 @@ compatibility_flags = [ "nodejs_compat" ]
 
 [[kv_namespaces]]
 binding = "OSS_SEARCH_LAB_KV"
-id = "dummy-id-for-local-dev"
-
-[[r2_buckets]]
-binding = "OSS_SEARCH_LAB_R2"
-bucket_name = "oss-search-lab-r2"
+id = "11520bfeee544516a954d6dc5b3ac303"
