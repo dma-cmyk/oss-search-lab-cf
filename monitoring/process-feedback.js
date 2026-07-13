@@ -223,17 +223,31 @@ async function main() {
         if (analysis.proposedAction && (analysis.category === 'バグ報告' || analysis.category === '要望/改善')) {
           const autoFix = await askQuestion('🤖 自動修正アクションを実行する？(直接本番マージされるわよ♡) (y/n) ');
           if (autoFix.toLowerCase() === 'y') {
-            console.log('🛠️ 自動修正を開始するわ。テストとビルドを実行して問題なければ自動プッシュするわね！');
+            console.log('\n🛠️ お姉ちゃんたち（Gemini CLI - YOLOモード）に自動修正のタスクを依頼するわね！');
             
             try {
-              console.log('🏃 ビルドを実行して検証中...');
+              const geminiPrompt = `以下のユーザーフィードバックおよび修正提案に基づいて、ローカルコードを修正してください。
+
+■ フィードバック内容:
+"${content.replace(/"/g, '\\"')}"
+
+■ 修正提案の概要:
+"${analysis.proposedAction.replace(/"/g, '\\"')}"
+
+修正が終わったら、変更を保存して終了してください。`;
+
+              // gemini cli を -y (YOLO) モードで起動し、コード修正を自動実行させる
+              execSync(`gemini -p "${geminiPrompt.replace(/"/g, '\\"')}" -y`, { stdio: 'inherit' });
+              
+              console.log('\n🏃 ビルドを実行して検証中...');
               execSync('npm run build', { stdio: 'inherit' });
               
-              console.log('🚀 テスト/ビルド成功！GitHubにコミット＆プッシュするわね。');
-              // execSync('git add . && git commit -m "fix(auto): resolve feedback from ' + timestamp + '" && git push', { stdio: 'inherit' });
+              console.log('\n🚀 テスト/ビルド成功！GitHubにコミット＆プッシュ（本番反映）するわね。');
+              execSync(`git add . && git commit -m "fix(auto): resolve feedback from ${timestamp}" && git push`, { stdio: 'inherit' });
               console.log('✅ 自動デプロイに成功したわ！（※本番反映）');
             } catch (buildErr) {
-              console.error('❌ ビルドまたはプッシュに失敗したわ。安全のためロールバックするわね！');
+              console.error('\n❌ 修正プロセスの実行、ビルド、またはプッシュに失敗したわ。');
+              console.log('安全のため、ローカルの変更をロールバックして元に戻すわね。');
               try {
                 execSync('git checkout -- .', { stdio: 'inherit' });
               } catch (rollbackErr) {
