@@ -223,10 +223,22 @@ async function main() {
         if (analysis.proposedAction && (analysis.category === 'バグ報告' || analysis.category === '要望/改善')) {
           const autoFix = await askQuestion('🤖 自動修正アクションを実行する？(直接本番マージされるわよ♡) (y/n) ');
           if (autoFix.toLowerCase() === 'y') {
-            console.log('\n🛠️ お姉ちゃんたち（Gemini CLI - YOLOモード）に自動修正のタスクを依頼するわね！');
+            console.log('\n🌸 作業を担当するお姉ちゃんを選んでね♡');
+            console.log('   1: ヴェラ (vela) [指揮官・技術実装 - S系甘やかし]');
+            console.log('   2: アイギス (aegis) [工兵・環境構築 - 豪快ボディタッチ]');
+            console.log('   3: シレーヌ (siren) [諜報・調査 - ねっとり溺愛]');
+            console.log('   4: レヴィ (levy) [監査・校正 - 真面目むっつりS]');
+            
+            const agentChoice = await askQuestion('👉 番号を入力してね (デフォルトは 1: vela): ');
+            let selectedAgent = 'vela';
+            if (agentChoice === '2') selectedAgent = 'aegis';
+            else if (agentChoice === '3') selectedAgent = 'siren';
+            else if (agentChoice === '4') selectedAgent = 'levy';
+
+            console.log(`\n🛠️ ${selectedAgent}お姉ちゃん（AGY CLI）に自動修正のタスクを依頼するわね！`);
             
             try {
-              const geminiPrompt = `以下のユーザーフィードバックおよび修正提案に基づいて、ローカルコードを修正してください。
+              const agyPrompt = `以下のユーザーフィードバックおよび修正提案に基づいて、ローカルコードを修正してください。
 
 ■ フィードバック内容:
 "${content.replace(/"/g, '\\"')}"
@@ -236,14 +248,14 @@ async function main() {
 
 修正が終わったら、変更を保存して終了してください。`;
 
-              // gemini cli を -y (YOLO) モードで起動し、コード修正を自動実行させる
-              execSync(`gemini -p "${geminiPrompt.replace(/"/g, '\\"')}" -y`, { stdio: 'inherit' });
+              // agy cli を呼び出し、選ばれたエージェントで自動実行させる (--dangerously-skip-permissions でYOLOモード)
+              execSync(`agy --agent ${selectedAgent} --prompt "${agyPrompt.replace(/"/g, '\\"')}" --dangerously-skip-permissions`, { stdio: 'inherit' });
               
               console.log('\n🏃 ビルドを実行して検証中...');
               execSync('npm run build', { stdio: 'inherit' });
               
               console.log('\n🚀 テスト/ビルド成功！GitHubにコミット＆プッシュ（本番反映）するわね。');
-              execSync(`git add . && git commit -m "fix(auto): resolve feedback from ${timestamp}" && git push`, { stdio: 'inherit' });
+              execSync(`git add . && git commit -m "fix(auto): resolve feedback from ${timestamp} by ${selectedAgent}" && git push`, { stdio: 'inherit' });
               console.log('✅ 自動デプロイに成功したわ！（※本番反映）');
             } catch (buildErr) {
               console.error('\n❌ 修正プロセスの実行、ビルド、またはプッシュに失敗したわ。');
