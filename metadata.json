@@ -1,0 +1,6 @@
+{
+  "name": "OSS SearchLab",
+  "description": "A Google-like search engine for GitHub open source software, utilizing Gemini AI to summarize search results, provide rankings, and generate detailed repository insights in the browser's preferred language.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

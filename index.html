@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OSS SearchLab - AI OSS Search Engine</title>
+    <script>
+      // Guard/Polyfill against iframe sandbox / platform environment issues where chrome.runtime or getManifest is missing or fails
+      (function() {
+        try {
+          if (typeof window !== 'undefined') {
+            if (!window.chrome) {
+              window.chrome = {};
+            }
+            if (!window.chrome.runtime) {
+              window.chrome.runtime = {};
+            }
+            if (typeof window.chrome.runtime.getManifest !== 'function') {
+              window.chrome.runtime.getManifest = function() {
+                return { version: '1.0.0', name: 'AI Studio Proxy Guard' };
+              };
+            }
+          }
+        } catch (e) {
+          console.warn('Chrome extension polyfill warning:', e);
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+
