@@ -266,7 +266,7 @@ export default function RepoDetailView({
                 : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
             }`}
             id="detail-bookmark-btn"
-            title={isBookmarked ? "お気に入りから削除" : "お気に入りに追加"}
+            title={isBookmarked ? (lang === "ja" ? "お気に入りから削除" : "Remove from Bookmarks") : (lang === "ja" ? "お気に入りに追加" : "Add to Bookmarks")}
           >
             <BookMarked className={`w-4 h-4 shrink-0 ${isBookmarked ? "fill-amber-500 text-amber-600" : "text-slate-400"}`} />
             <span className="hidden sm:inline ml-1.5">{isBookmarked ? (lang === "ja" ? "お気に入り中" : "Bookmarked") : (lang === "ja" ? "お気に入りに追加" : "Add to Bookmarks")}</span>
@@ -294,7 +294,7 @@ export default function RepoDetailView({
                   : "bg-indigo-600 border-indigo-600 text-white hover:bg-indigo-700 hover:border-indigo-700 shadow-sm"
               }`}
               id="detail-save-report-btn"
-              title={isSaved ? "レポート保存済み" : "レポートをローカル保存"}
+              title={isSaved ? (lang === "ja" ? "レポート保存済み" : "Report Saved") : (lang === "ja" ? "レポートをローカル保存" : "Save Report Locally")}
             >
               <Save className={`w-4 h-4 shrink-0 ${isSaved ? "text-emerald-600" : "text-white"}`} />
               <span className="hidden sm:inline ml-1.5">
