@@ -383,6 +383,31 @@ function getAIClientAndModel(req: express.Request, defaultModel = "models/gemini
 const app = express();
 const PORT = 3101;
 
+// 🛡️ 不審なスキャナーや悪意あるIPを水際でブロックする防衛バリアよ♡
+app.use((req, res, next) => {
+  const clientIp = (req.headers["cf-connecting-ip"] as string) || req.ip || "";
+  const reqPath = req.path.toLowerCase();
+  
+  // 1. オランダの攻撃ボットのIPを直接ブラックリストで弾くわ
+  if (clientIp === "195.178.110.102" || clientIp === "195.178.110.223") {
+    console.log(`[Security] Blocked malicious IP: ${clientIp} on path: ${req.path}`);
+    return res.status(403).send("Forbidden");
+  }
+  
+  // 2. 機密設定ファイル（.env, .gitなど）を狙うスキャンを即座にブロックするわよ
+  if (
+    reqPath.includes("/.env") || 
+    reqPath.includes("/.git") || 
+    reqPath.includes("wp-admin") || 
+    reqPath.includes("xmlrpc.php")
+  ) {
+    console.log(`[Security] Blocked scanner attempt on path: ${req.path} from IP: ${clientIp}`);
+    return res.status(403).send("Forbidden");
+  }
+  
+  next();
+});
+
 app.use(express.json());
 
 function getLanguageName(lang: string): string {
