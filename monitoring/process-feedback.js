@@ -126,12 +126,35 @@ async function analyzeFeedback(feedbackText, feedbackType) {
     
     return JSON.parse(jsonText.trim());
   } catch (error) {
-    console.error('AI解析エラー:', error);
+    console.error('AI解析エラー: キーワードによる簡易分類にフォールバックするわ。', error);
+    
+    // キーワードによる簡易自動分類よ♡
+    let category = 'その他';
+    let priority = 'なし';
+    let analysis = 'AI解析に失敗したため、キーワードマッチングによる簡易自動分類を実行したわ。';
+    let reaction = 'ごめんね美緒ちゃん、AIの機嫌が悪かったみたいでお姉ちゃんが代わりに仕分けしておいたわ♡';
+    
+    const text = feedbackText.toLowerCase();
+    
+    if (text.includes('バグ') || text.includes('落ち') || text.includes('被') || text.includes('エラー') || text.includes('動か') || text.includes('直して') || text.includes('不具合') || text.includes('おかしい') || text.includes('重な') || text.includes('被さ')) {
+      category = 'バグ報告';
+      priority = '高';
+      reaction = '美緒ちゃん、バグを見つけてくれてありがとう！お姉ちゃんたちがすぐに直すのを手伝ってあげるから、元気出してね♡';
+    } else if (text.includes('欲しい') || text.includes('改善') || text.includes('追加') || text.includes('機能') || text.includes('提案') || text.includes('要望')) {
+      category = '要望/改善';
+      priority = '中';
+      reaction = '素敵な機能改善の提案ね美緒ちゃん！お姉ちゃんたちと一緒にもっと使いやすくしていきましょう♡';
+    } else if (text.includes('ありがとう') || text.includes('すごい') || text.includes('応援') || text.includes('好き') || text.includes('ファン') || text.includes('愛')) {
+      category = 'ファンレター';
+      priority = '高';
+      reaction = 'まぁ！美緒ちゃんからこんなに嬉しいメッセージをもらえるなんて、お姉ちゃんたち胸がキュンとしちゃう！大好きよ♡';
+    }
+    
     return {
-      category: 'その他',
-      priority: '低',
-      analysis: '解析に失敗したわ。',
-      reaction: 'ごめんね美緒ちゃん、お姉ちゃんうまくパースできなかったみたい。',
+      category,
+      priority,
+      analysis,
+      reaction,
       proposedAction: null
     };
   }
