@@ -1753,6 +1753,11 @@ export default function App() {
                             <h3 className="font-bold text-slate-800 text-lg sm:text-xl break-all">
                               {selectedShowcaseRepo.fullName}
                             </h3>
+                            {selectedShowcaseRepo.repo?.aiTitle && (
+                              <p className="text-xs text-indigo-600 font-bold mt-0.5 tracking-tight">
+                                {selectedShowcaseRepo.repo.aiTitle}
+                              </p>
+                            )}
                             <div className="flex items-center space-x-2 mt-1">
                               {selectedShowcaseRepo.repo?.language && (
                                 <span className="text-[10px] bg-slate-100 text-slate-600 font-mono px-2 py-0.5 rounded-full border border-slate-200/60">
@@ -1774,11 +1779,23 @@ export default function App() {
                         )}
                       </div>
 
-                      {/* Repository Description (if available) */}
-                      {selectedShowcaseRepo.repo?.description && (
-                        <p className="text-slate-600 text-xs sm:text-sm bg-slate-50/80 border border-slate-100 rounded-2xl p-4 leading-relaxed">
-                          {selectedShowcaseRepo.repo.description}
-                        </p>
+                      {/* Repository Description / AI Summary */}
+                      {(selectedShowcaseRepo.repo?.aiSummary || selectedShowcaseRepo.repo?.description) && (
+                        selectedShowcaseRepo.repo?.aiSummary ? (
+                          <div className="bg-indigo-50/40 rounded-2xl p-4 border border-indigo-100/50 space-y-1.5" id="showcase-detail-ai-summary">
+                            <div className="flex items-center space-x-1.5 text-xs font-semibold text-indigo-700">
+                              <Cpu className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                              <span>{selectedShowcaseRepo.repo?.aiTitle || (resolvedLang === "ja" ? "AI概要" : "AI Summary")}</span>
+                            </div>
+                            <p className="text-slate-700 text-xs sm:text-sm leading-relaxed select-text" id="showcase-detail-ai-desc">
+                              {selectedShowcaseRepo.repo.aiSummary}
+                            </p>
+                          </div>
+                        ) : (
+                          <p className="text-slate-600 text-xs sm:text-sm bg-slate-50/80 border border-slate-100 rounded-2xl p-4 leading-relaxed" id="showcase-detail-raw-desc">
+                            {selectedShowcaseRepo.repo.description}
+                          </p>
+                        )
                       )}
 
                       {/* Shares Grid */}
@@ -1962,8 +1979,13 @@ export default function App() {
                                 <h3 className="font-bold text-slate-800 group-hover:text-indigo-600 transition text-sm sm:text-base leading-snug break-all">
                                   {group.fullName}
                                 </h3>
+                                {group.repo?.aiTitle && (
+                                  <p className="text-[10px] text-indigo-600 font-bold tracking-tight">
+                                    {group.repo.aiTitle}
+                                  </p>
+                                )}
                                 <p className="text-slate-500 text-xs line-clamp-3 leading-relaxed">
-                                  {group.repo?.description || (resolvedLang === "ja" ? "説明文はありません。" : "No description available.")}
+                                  {group.repo?.aiSummary || group.repo?.description || (resolvedLang === "ja" ? "説明文はありません。" : "No description available.")}
                                 </p>
                               </div>
                             </div>
