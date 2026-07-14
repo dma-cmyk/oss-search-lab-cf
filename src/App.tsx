@@ -10,6 +10,7 @@ import {
   AlertCircle,
   Globe,
   ChevronDown,
+  ChevronLeft,
   Settings,
   Github,
   Gitlab,
