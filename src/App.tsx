@@ -9,6 +9,7 @@ import {
   History,
   AlertCircle,
   Globe,
+  Cpu,
   ChevronDown,
   ChevronLeft,
   Settings,
