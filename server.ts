@@ -3087,7 +3087,8 @@ app.post("/api/share", async (req, res) => {
       repo,
       timestamp: record.timestamp,
       stars: record.stars,
-      summary: record.summary
+      summary: record.summary,
+      title: data.title || repo.name || "AI Analysis Report"
     });
 
     // 最大500件程度でローテーションしてバケット容量を節約するわよ♡

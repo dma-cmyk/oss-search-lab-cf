@@ -129,6 +129,9 @@ export default function App() {
   const [sharedLoading, setSharedLoading] = useState(false);
   const [showcaseList, setShowcaseList] = useState<any[]>([]);
   const [showcaseLoading, setShowcaseLoading] = useState(false);
+  const [showcaseSearch, setShowcaseSearch] = useState("");
+  const [showcaseSort, setShowcaseSort] = useState<"latest" | "stars" | "count">("latest");
+  const [selectedShowcaseRepo, setSelectedShowcaseRepo] = useState<any | null>(null);
 
   // Pagination States
   const [page, setPage] = useState(1);
@@ -1676,101 +1679,304 @@ export default function App() {
                 </div>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="showcase-grid">
-                {showcaseList.map((item: any) => (
-                  <div
-                    key={item.id}
-                    onClick={() => {
-                      setSharedLoading(true);
-                      fetch(`/api/share?id=${item.id}`)
-                        .then(res => {
-                          if (!res.ok) throw new Error("Failed to fetch shared details");
-                          return res.json();
-                        })
-                        .then(sharedData => {
-                          const repoObj: Repository = {
-                            id: sharedData.repo?.id || Math.random().toString(),
-                            name: sharedData.repo?.name || sharedData.repo?.fullName?.split("/")[1] || "shared",
-                            fullName: sharedData.repo?.fullName || sharedData.repo || "shared-repo",
-                            source: sharedData.repo?.source || "github",
-                            owner: sharedData.repo?.owner || {
-                              login: (sharedData.repo?.fullName || sharedData.repo || "owner/repo").split("/")[0],
-                              avatarUrl: "",
-                              htmlUrl: ""
-                            },
-                            htmlUrl: sharedData.repo?.htmlUrl || "",
-                            description: sharedData.repo?.description || "",
-                            stargazersCount: sharedData.repo?.stargazersCount || sharedData.stars || 0,
-                            forksCount: sharedData.repo?.forksCount || 0,
-                            watchersCount: sharedData.repo?.watchersCount || 0,
-                            openIssuesCount: sharedData.repo?.openIssuesCount || 0,
-                            language: sharedData.repo?.language || null,
-                            topics: sharedData.repo?.topics || [],
-                            updatedAt: sharedData.repo?.updatedAt || new Date().toISOString(),
-                            createdAt: sharedData.repo?.createdAt || new Date().toISOString(),
-                            aiTitle: sharedData.repo?.aiTitle || "",
-                            aiSummary: sharedData.repo?.aiSummary || "",
-                            aiTags: sharedData.repo?.aiTags || []
-                          };
-                          setSelectedRepo(repoObj);
-                          setSharedReportData(sharedData.data);
-                          setIsSharedView(true);
-                          
-                          // Set URL history so reload works
-                          const url = new URL(window.location.href);
-                          url.searchParams.set("share", item.id);
-                          window.history.pushState({}, "", url.pathname + url.search);
-                        })
-                        .catch(err => {
-                          console.log("Failed to load details from showcase:", err);
-                          alert(resolvedLang === "ja" ? "レポートの読み込みに失敗したわ。" : "Failed to load report.");
-                        })
-                        .finally(() => {
-                          setSharedLoading(false);
-                        });
-                    }}
-                    className="bg-white border border-slate-150 rounded-2xl p-5 hover:shadow-md hover:border-indigo-200 transition cursor-pointer flex flex-col justify-between group h-full relative"
-                  >
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-1.5 text-[10px] text-slate-400 font-mono">
-                          {item.repo?.source === "gitlab" ? <Gitlab className="w-3 h-3 text-orange-500" /> : <Github className="w-3 h-3 text-slate-700" />}
-                          <span>{item.repo?.source || "github"}</span>
+              (() => {
+                // 1. Group by repository
+                const groupedRepos: any[] = [];
+                showcaseList.forEach((item: any) => {
+                  const fullName = item.repo?.fullName || item.repo || "unknown/repo";
+                  let existing = groupedRepos.find(g => g.fullName === fullName);
+                  if (!existing) {
+                    existing = {
+                      fullName,
+                      repo: item.repo,
+                      stars: item.stars || item.repo?.stargazersCount || 0,
+                      latestTimestamp: item.timestamp,
+                      shares: []
+                    };
+                    groupedRepos.push(existing);
+                  }
+                  
+                  if (new Date(item.timestamp) > new Date(existing.latestTimestamp)) {
+                    existing.latestTimestamp = item.timestamp;
+                  }
+                  
+                  existing.shares.push({
+                    id: item.id,
+                    title: item.title || item.repo?.aiTitle || (resolvedLang === "ja" ? "AI解析レポート" : "AI Report"),
+                    summary: item.summary,
+                    timestamp: item.timestamp
+                  });
+                });
+
+                // 2. Filter by search query
+                let filteredRepos = groupedRepos.filter(g => 
+                  g.fullName.toLowerCase().includes(showcaseSearch.toLowerCase()) ||
+                  (g.repo?.description || "").toLowerCase().includes(showcaseSearch.toLowerCase())
+                );
+
+                // 3. Sort
+                if (showcaseSort === "stars") {
+                  filteredRepos.sort((a, b) => b.stars - a.stars);
+                } else if (showcaseSort === "count") {
+                  filteredRepos.sort((a, b) => b.shares.length - a.shares.length);
+                } else { // "latest"
+                  filteredRepos.sort((a, b) => new Date(b.latestTimestamp).getTime() - new Date(a.latestTimestamp).getTime());
+                }
+
+                // Rendering Logic
+                if (selectedShowcaseRepo) {
+                  // Find selected repository's current shares
+                  const currentRepoGroup = groupedRepos.find(g => g.fullName === selectedShowcaseRepo.fullName);
+                  const sharesList = currentRepoGroup ? currentRepoGroup.shares : [];
+
+                  return (
+                    <div className="space-y-6 animate-fade-in" id="showcase-shares-view">
+                      {/* Back header button */}
+                      <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+                        <div className="flex items-center space-x-3">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedShowcaseRepo(null)}
+                            className="p-2 hover:bg-slate-100 border border-slate-200 rounded-xl text-slate-600 transition cursor-pointer flex items-center justify-center"
+                            id="showcase-back-btn"
+                          >
+                            <ChevronLeft className="w-4 h-4" />
+                          </button>
+                          <div>
+                            <h3 className="font-bold text-slate-800 text-lg sm:text-xl break-all">
+                              {selectedShowcaseRepo.fullName}
+                            </h3>
+                            <div className="flex items-center space-x-2 mt-1">
+                              {selectedShowcaseRepo.repo?.language && (
+                                <span className="text-[10px] bg-slate-100 text-slate-600 font-mono px-2 py-0.5 rounded-full border border-slate-200/60">
+                                  {selectedShowcaseRepo.repo.language}
+                                </span>
+                              )}
+                              <span className="text-xs text-slate-500">
+                                {resolvedLang === "ja" ? `共有レポート: ${sharesList.length}件` : `${sharesList.length} shared reports`}
+                              </span>
+                            </div>
+                          </div>
                         </div>
-                        {item.stars > 0 && (
-                          <div className="flex items-center space-x-0.5 text-xs text-amber-500 font-semibold bg-amber-50/50 px-2 py-0.5 rounded-full border border-amber-100/70">
-                            <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
-                            <span>{item.stars.toLocaleString()}</span>
+
+                        {selectedShowcaseRepo.stars > 0 && (
+                          <div className="flex items-center space-x-1 text-sm text-amber-500 font-bold bg-amber-50 px-3 py-1 rounded-full border border-amber-100">
+                            <Star className="w-4 h-4 fill-amber-500 text-amber-500" />
+                            <span>{selectedShowcaseRepo.stars.toLocaleString()}</span>
                           </div>
                         )}
                       </div>
 
-                      <div className="space-y-1">
-                        <h3 className="font-bold text-slate-800 group-hover:text-indigo-600 transition text-sm sm:text-base leading-snug break-all">
-                          {item.repo?.fullName || item.repo}
-                        </h3>
-                        <p className="text-slate-500 text-xs line-clamp-3 leading-relaxed">
-                          {item.summary || (resolvedLang === "ja" ? "AI要約はまだありません。" : "No AI summary available.")}
+                      {/* Repository Description (if available) */}
+                      {selectedShowcaseRepo.repo?.description && (
+                        <p className="text-slate-600 text-xs sm:text-sm bg-slate-50/80 border border-slate-100 rounded-2xl p-4 leading-relaxed">
+                          {selectedShowcaseRepo.repo.description}
                         </p>
+                      )}
+
+                      {/* Shares Grid */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6" id="showcase-shares-grid">
+                        {sharesList.map((share: any) => (
+                          <div
+                            key={share.id}
+                            onClick={() => {
+                              setSharedLoading(true);
+                              fetch(`/api/share?id=${share.id}`)
+                                .then(res => {
+                                  if (!res.ok) throw new Error("Failed to fetch shared details");
+                                  return res.json();
+                                })
+                                .then(sharedData => {
+                                  const repoObj: Repository = {
+                                    id: sharedData.repo?.id || Math.random().toString(),
+                                    name: sharedData.repo?.name || sharedData.repo?.fullName?.split("/")[1] || "shared",
+                                    fullName: sharedData.repo?.fullName || sharedData.repo || "shared-repo",
+                                    source: sharedData.repo?.source || "github",
+                                    owner: sharedData.repo?.owner || {
+                                      login: (sharedData.repo?.fullName || sharedData.repo || "owner/repo").split("/")[0],
+                                      avatarUrl: "",
+                                      htmlUrl: ""
+                                    },
+                                    htmlUrl: sharedData.repo?.htmlUrl || "",
+                                    description: sharedData.repo?.description || "",
+                                    stargazersCount: sharedData.repo?.stargazersCount || sharedData.stars || 0,
+                                    forksCount: sharedData.repo?.forksCount || 0,
+                                    watchersCount: sharedData.repo?.watchersCount || 0,
+                                    openIssuesCount: sharedData.repo?.openIssuesCount || 0,
+                                    language: sharedData.repo?.language || null,
+                                    topics: sharedData.repo?.topics || [],
+                                    updatedAt: sharedData.repo?.updatedAt || new Date().toISOString(),
+                                    createdAt: sharedData.repo?.createdAt || new Date().toISOString(),
+                                    aiTitle: sharedData.repo?.aiTitle || "",
+                                    aiSummary: sharedData.repo?.aiSummary || "",
+                                    aiTags: sharedData.repo?.aiTags || []
+                                  };
+                                  setSelectedRepo(repoObj);
+                                  setSharedReportData(sharedData.data);
+                                  setIsSharedView(true);
+                                  
+                                  // Set URL history so reload works
+                                  const url = new URL(window.location.href);
+                                  url.searchParams.set("share", share.id);
+                                  window.history.pushState({}, "", url.pathname + url.search);
+                                })
+                                .catch(err => {
+                                  console.log("Failed to load details from showcase:", err);
+                                  alert(resolvedLang === "ja" ? "レポートの読み込みに失敗したわ。" : "Failed to load report.");
+                                })
+                                .finally(() => {
+                                  setSharedLoading(false);
+                                });
+                            }}
+                            className="bg-white border border-slate-150 rounded-2xl p-5 hover:shadow-md hover:border-indigo-200 transition cursor-pointer flex flex-col justify-between group relative h-full min-h-[160px]"
+                          >
+                            <div className="space-y-3">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[10px] text-slate-400 font-mono">
+                                  {new Date(share.timestamp).toLocaleDateString(resolvedLang === "ja" ? "ja-JP" : "en-US", {
+                                    year: "numeric",
+                                    month: "short",
+                                    day: "numeric",
+                                    hour: "2-digit",
+                                    minute: "2-digit"
+                                  })}
+                                </span>
+                                <span className="text-[10px] bg-indigo-50 text-indigo-700 font-semibold px-2 py-0.5 rounded-full border border-indigo-100/50">
+                                  {resolvedLang === "ja" ? "技術特報" : "Report"}
+                                </span>
+                              </div>
+
+                              <div className="space-y-1">
+                                <h4 className="font-bold text-slate-800 group-hover:text-indigo-600 transition text-sm sm:text-base leading-snug break-all">
+                                  {share.title}
+                                </h4>
+                                <p className="text-slate-500 text-xs line-clamp-3 leading-relaxed">
+                                  {share.summary || (resolvedLang === "ja" ? "AI要約はまだありません。" : "No AI summary available.")}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="pt-4 mt-auto border-t border-slate-100 flex items-center justify-end">
+                              <span className="text-xs font-bold text-indigo-600 group-hover:translate-x-1 transition flex items-center space-x-1">
+                                <span>{resolvedLang === "ja" ? "レポートを読む" : "Read Report"}</span>
+                                <span>➔</span>
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="space-y-6" id="showcase-repos-view">
+                    {/* Search and Sort Controls */}
+                    <div className="flex flex-col sm:flex-row items-center gap-4 bg-slate-50 border border-slate-150 rounded-2xl p-4" id="showcase-controls">
+                      {/* Search Input */}
+                      <div className="relative flex-1 w-full">
+                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <input
+                          type="text"
+                          placeholder={resolvedLang === "ja" ? "リポジトリを検索..." : "Search repositories..."}
+                          value={showcaseSearch}
+                          onChange={(e) => setShowcaseSearch(e.target.value)}
+                          className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 rounded-xl text-xs font-semibold text-slate-700 shadow-xs outline-none transition"
+                          id="showcase-search-input"
+                        />
+                        {showcaseSearch && (
+                          <button
+                            type="button"
+                            onClick={() => setShowcaseSearch("")}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-bold"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Sort Select */}
+                      <div className="flex items-center space-x-2 w-full sm:w-auto shrink-0 justify-end">
+                        <span className="text-xs font-bold text-slate-500 whitespace-nowrap">
+                          {resolvedLang === "ja" ? "並び替え:" : "Sort:"}
+                        </span>
+                        <select
+                          value={showcaseSort}
+                          onChange={(e: any) => setShowcaseSort(e.target.value)}
+                          className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 shadow-xs outline-none focus:border-indigo-400 cursor-pointer"
+                          id="showcase-sort-select"
+                        >
+                          <option value="latest">{resolvedLang === "ja" ? "最新共有順" : "Latest Shared"}</option>
+                          <option value="stars">{resolvedLang === "ja" ? "スター数順" : "Star Count"}</option>
+                          <option value="count">{resolvedLang === "ja" ? "レポート数順" : "Report Count"}</option>
+                        </select>
                       </div>
                     </div>
 
-                    <div className="pt-4 mt-auto border-t border-slate-100 flex items-center justify-between">
-                      <span className="text-[10px] text-slate-400 font-mono">
-                        {new Date(item.timestamp).toLocaleDateString(resolvedLang === "ja" ? "ja-JP" : "en-US", {
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric"
-                        })}
-                      </span>
-                      <span className="text-xs font-bold text-indigo-600 group-hover:translate-x-1 transition flex items-center space-x-1">
-                        <span>{resolvedLang === "ja" ? "レポートを読む" : "Read Report"}</span>
-                        <span>➔</span>
-                      </span>
-                    </div>
+                    {/* Empty state for search */}
+                    {filteredRepos.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-16 space-y-3 bg-white border border-slate-150 rounded-2xl text-center" id="showcase-search-empty">
+                        <div className="p-3 bg-slate-50 text-slate-400 rounded-full">
+                          <Search className="w-6 h-6" />
+                        </div>
+                        <div className="space-y-1">
+                          <h4 className="text-slate-800 font-bold text-xs">
+                            {resolvedLang === "ja" ? "一致するリポジトリが見つかりません" : "No matching repositories"}
+                          </h4>
+                          <p className="text-slate-500 text-[11px]">
+                            {resolvedLang === "ja" ? "検索ワードを変えてみてください。" : "Try adjusting your search keywords."}
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      /* Repositories Grid (First Level) */
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="showcase-repos-grid">
+                        {filteredRepos.map((group: any) => (
+                          <div
+                            key={group.fullName}
+                            onClick={() => setSelectedShowcaseRepo(group)}
+                            className="bg-white border border-slate-155 hover:border-indigo-200 hover:shadow-md rounded-2xl p-5 transition cursor-pointer flex flex-col justify-between group h-full relative min-h-[160px]"
+                          >
+                            <div className="space-y-3">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-1.5 text-[10px] text-slate-400 font-mono">
+                                  {group.repo?.source === "gitlab" ? <Gitlab className="w-3 h-3 text-orange-500" /> : <Github className="w-3 h-3 text-slate-700" />}
+                                  <span>{group.repo?.source || "github"}</span>
+                                </div>
+                                {group.stars > 0 && (
+                                  <div className="flex items-center space-x-0.5 text-xs text-amber-500 font-semibold bg-amber-50/50 px-2 py-0.5 rounded-full border border-amber-100/70">
+                                    <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
+                                    <span>{group.stars.toLocaleString()}</span>
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="space-y-1">
+                                <h3 className="font-bold text-slate-800 group-hover:text-indigo-600 transition text-sm sm:text-base leading-snug break-all">
+                                  {group.fullName}
+                                </h3>
+                                <p className="text-slate-500 text-xs line-clamp-3 leading-relaxed">
+                                  {group.repo?.description || (resolvedLang === "ja" ? "説明文はありません。" : "No description available.")}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="pt-4 mt-auto border-t border-slate-100 flex items-center justify-between">
+                              <span className="text-[10px] bg-indigo-50 text-indigo-700 font-bold px-2 py-0.5 rounded-full border border-indigo-100/50">
+                                {resolvedLang === "ja" ? `共有数: ${group.shares.length}件` : `Reports: ${group.shares.length}`}
+                              </span>
+                              <span className="text-xs font-bold text-indigo-600 group-hover:translate-x-1 transition flex items-center space-x-1">
+                                <span>{resolvedLang === "ja" ? "レポート一覧" : "View Reports"}</span>
+                                <span>➔</span>
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                ))}
-              </div>
+                );
+              })()
             )}
           </div>
         ) : (
