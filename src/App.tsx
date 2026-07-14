@@ -1204,7 +1204,7 @@ export default function App() {
         <SearchHeader
           query={query}
           onSearch={handleSearch}
-          selectedLang={lang}
+          selectedLang={resolvedLang}
           onLangChange={setLang}
           onGoHome={() => {
             setMode("home");
