@@ -19,6 +19,8 @@ interface SearchHeaderProps {
   savedReportsCount: number;
   onShowSavedReports: () => void;
   showSavedReports: boolean;
+  onShowShowcase: () => void;
+  showShowcase: boolean;
   onOpenMobileMenu: () => void;
 }
 
@@ -38,6 +40,8 @@ export default function SearchHeader({
   savedReportsCount,
   onShowSavedReports,
   showSavedReports,
+  onShowShowcase,
+  showShowcase,
   onOpenMobileMenu,
 }: SearchHeaderProps) {
   const [inputVal, setInputVal] = useState(query);
@@ -164,6 +168,21 @@ export default function SearchHeader({
 
         {/* Right Side Actions on Desktop (hidden on mobile) */}
         <div className="hidden sm:flex items-center space-x-3 shrink-0" id="header-desktop-actions">
+
+          {/* Showcase Toggle button */}
+          <button
+            type="button"
+            onClick={onShowShowcase}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition cursor-pointer ${
+              showShowcase
+                ? "bg-indigo-600 border-indigo-600 text-white"
+                : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+            }`}
+            id="header-showcase-toggle-btn"
+          >
+            <Globe className="w-3.5 h-3.5" />
+            <span>{selectedLang === "ja" ? "みんなのレポート" : "Showcase"}</span>
+          </button>
 
           {/* Bookmarks Toggle button */}
           <button

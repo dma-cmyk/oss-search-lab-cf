@@ -38,3 +38,4 @@ monitoring/processed-feedbacks.json
 monitoring/classified-feedbacks.json
 monitoring/cron-run.log
 .wrangler/
+shares/

@@ -6,3 +6,7 @@ compatibility_flags = [ "nodejs_compat" ]
 [[kv_namespaces]]
 binding = "OSS_SEARCH_LAB_KV"
 id = "11520bfeee544516a954d6dc5b3ac303"
+
+[[r2_buckets]]
+binding = "OSS_SEARCH_LAB_R2"
+bucket_name = "oss-search-lab-reports"

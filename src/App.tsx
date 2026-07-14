@@ -21,6 +21,7 @@ import {
   Star,
   Edit2,
   MessageSquare,
+  RefreshCw,
 } from "lucide-react";
 import {
   Repository,
@@ -102,7 +103,7 @@ const migrateToArticlesStructure = (reports: any[]): SavedReport[] => {
 };
 
 export default function App() {
-  const [mode, setMode] = useState<"home" | "results">("home");
+  const [mode, setMode] = useState<"home" | "results" | "showcase">("home");
   const [query, setQuery] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [optimizedQuery, setOptimizedQuery] = useState("");
@@ -121,6 +122,13 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [loadingStatus, setLoadingStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Shared reports & Showcase states
+  const [sharedReportData, setSharedReportData] = useState<any | null>(null);
+  const [isSharedView, setIsSharedView] = useState(false);
+  const [sharedLoading, setSharedLoading] = useState(false);
+  const [showcaseList, setShowcaseList] = useState<any[]>([]);
+  const [showcaseLoading, setShowcaseLoading] = useState(false);
 
   // Pagination States
   const [page, setPage] = useState(1);
@@ -553,10 +561,53 @@ export default function App() {
     
 
     // Check URL parameters for deep link
+    const shareParam = searchParams.get("share");
     const sourceParam = searchParams.get("source");
     const repoParam = searchParams.get("repo");
     
-    if (repoParam) {
+    if (shareParam) {
+      setSharedLoading(true);
+      fetch(`/api/share?id=${encodeURIComponent(shareParam)}`)
+        .then(res => {
+          if (!res.ok) throw new Error("Failed to fetch shared report");
+          return res.json();
+        })
+        .then(sharedData => {
+          const repoObj: Repository = {
+            id: sharedData.repo?.id || Math.random().toString(),
+            name: sharedData.repo?.name || sharedData.repo?.fullName?.split("/")[1] || "shared",
+            fullName: sharedData.repo?.fullName || sharedData.repo || "shared-repo",
+            source: sharedData.repo?.source || "github",
+            owner: sharedData.repo?.owner || {
+              login: (sharedData.repo?.fullName || sharedData.repo || "owner/repo").split("/")[0],
+              avatarUrl: "",
+              htmlUrl: ""
+            },
+            htmlUrl: sharedData.repo?.htmlUrl || "",
+            description: sharedData.repo?.description || "",
+            stargazersCount: sharedData.repo?.stargazersCount || sharedData.stars || 0,
+            forksCount: sharedData.repo?.forksCount || 0,
+            watchersCount: sharedData.repo?.watchersCount || 0,
+            openIssuesCount: sharedData.repo?.openIssuesCount || 0,
+            language: sharedData.repo?.language || null,
+            topics: sharedData.repo?.topics || [],
+            updatedAt: sharedData.repo?.updatedAt || new Date().toISOString(),
+            createdAt: sharedData.repo?.createdAt || new Date().toISOString(),
+            aiTitle: sharedData.repo?.aiTitle || "",
+            aiSummary: sharedData.repo?.aiSummary || "",
+            aiTags: sharedData.repo?.aiTags || []
+          };
+          setSelectedRepo(repoObj);
+          setSharedReportData(sharedData.data);
+          setIsSharedView(true);
+        })
+        .catch(err => {
+          console.log("Failed to load shared view:", err);
+        })
+        .finally(() => {
+          setSharedLoading(false);
+        });
+    } else if (repoParam) {
       const sourceToUse = sourceParam || "github";
       fetch(`/api/repo?source=${sourceToUse}&name=${encodeURIComponent(repoParam)}`)
         .then(res => {
@@ -624,6 +675,27 @@ export default function App() {
       setResolvedLang(lang);
     }
   }, [lang]);
+
+  // Fetch shared reports showcase list when mode changes to 'showcase'
+  useEffect(() => {
+    if (mode === "showcase") {
+      setShowcaseLoading(true);
+      fetch("/api/share/list")
+        .then(res => {
+          if (!res.ok) throw new Error("Failed to fetch showcase list");
+          return res.json();
+        })
+        .then(data => {
+          setShowcaseList(data);
+        })
+        .catch(err => {
+          console.error("Failed to load showcase list:", err);
+        })
+        .finally(() => {
+          setShowcaseLoading(false);
+        });
+    }
+  }, [mode]);
 
   // Fetch trending repositories
   useEffect(() => {
@@ -1136,6 +1208,14 @@ export default function App() {
           onClose={() => {
             setSelectedRepo(null);
             setSelectedSavedReportDetail(null);
+            if (isSharedView) {
+              setIsSharedView(false);
+              setSharedReportData(null);
+              // Clean up share parameter from URL
+              const url = new URL(window.location.href);
+              url.searchParams.delete("share");
+              window.history.replaceState({}, "", url.pathname + url.search);
+            }
           }}
           lang={resolvedLang}
           geminiApiKey={geminiApiKey}
@@ -1145,7 +1225,7 @@ export default function App() {
           isBookmarked={bookmarks.some((b) => b.id === selectedRepo.id && b.source === selectedRepo.source)}
           onToggleBookmark={() => handleToggleBookmark(selectedRepo)}
           bypassCache={bypassCache}
-          savedDetail={selectedSavedReportDetail}
+          savedDetail={isSharedView ? sharedReportData : selectedSavedReportDetail}
           savedReports={savedReports}
           onSaveReport={(detailData) => handleSaveReport(selectedRepo, detailData)}
           onOpenSettings={() => setIsSettingsOpen(true)}
@@ -1199,8 +1279,8 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans selection:bg-indigo-100 selection:text-indigo-900" id="app-root-container">
       
-      {/* 1. Results mode header */}
-      {mode === "results" && (
+      {/* 1. Results / Showcase mode header */}
+      {(mode === "results" || mode === "showcase") && (
         <SearchHeader
           query={query}
           onSearch={handleSearch}
@@ -1218,20 +1298,32 @@ export default function App() {
           }}
           bookmarkedCount={bookmarks.length}
           onShowBookmarks={() => {
+            setMode("results");
             setShowBookmarks(!showBookmarks);
             setShowSavedReports(false);
           }}
-          showBookmarks={showBookmarks}
+          showBookmarks={showBookmarks && mode === "results"}
           onOpenSettings={() => setIsSettingsOpen(true)}
           onOpenMagazine={handleOpenMagazine}
           searchMode={searchMode}
           onSearchModeChange={setSearchMode}
           savedReportsCount={savedReports.length}
           onShowSavedReports={() => {
+            setMode("results");
             setShowSavedReports(!showSavedReports);
             setShowBookmarks(false);
           }}
-          showSavedReports={showSavedReports}
+          showSavedReports={showSavedReports && mode === "results"}
+          onShowShowcase={() => {
+            if (mode === "showcase") {
+              setMode("home");
+            } else {
+              setMode("showcase");
+              setShowBookmarks(false);
+              setShowSavedReports(false);
+            }
+          }}
+          showShowcase={mode === "showcase"}
           onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
         />
       )}
@@ -1252,6 +1344,20 @@ export default function App() {
 
           {/* Desktop Right Side Actions */}
           <div className="hidden sm:flex items-center space-x-2">
+            <button
+              type="button"
+              onClick={() => {
+                setMode("showcase");
+                setShowBookmarks(false);
+                setShowSavedReports(false);
+              }}
+              className="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 bg-white border border-slate-200 hover:border-slate-300 rounded-xl text-xs font-semibold text-slate-600 shadow-sm transition cursor-pointer"
+              id="home-sticky-showcase-btn"
+            >
+              <Globe className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              <span className="hidden sm:inline">{resolvedLang === "ja" ? "みんなのレポート" : "Showcase"}</span>
+            </button>
+
             <button
               type="button"
               onClick={() => {
@@ -1473,7 +1579,144 @@ export default function App() {
                 <div className="p-4 bg-slate-100 border border-slate-200 rounded-2xl text-xs text-slate-500 text-center" id="trending-error-container">
                   {trendingError}
                 </div>
-              ) : (
+              ) : mode === "showcase" ? (
+          /* ==================== SHOWCASE VIEW ==================== */
+          <div className="flex-1 p-4 sm:p-6 md:p-8 max-w-7xl mx-auto w-full space-y-6" id="showcase-view-wrapper">
+            <div className="border-b border-slate-200 pb-4">
+              <h2 className="text-xl font-bold text-slate-800" id="showcase-title-heading">
+                {resolvedLang === "ja" ? "みんなのAIレポート" : "Shared AI Reports"}
+              </h2>
+              <p className="text-slate-500 text-xs sm:text-sm mt-1" id="showcase-subtitle">
+                {resolvedLang === "ja" 
+                  ? "世界中の開発者が共有した、OSSのAI解析レポート（技術検証特報）が集まる広場です。" 
+                  : "Explore AI-generated analysis reports shared by developers worldwide."}
+              </p>
+            </div>
+
+            {showcaseLoading ? (
+              <div className="flex flex-col items-center justify-center py-20 space-y-3 bg-white border border-slate-200 rounded-2xl" id="showcase-loading">
+                <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl animate-spin">
+                  <RefreshCw className="w-6 h-6" />
+                </div>
+                <span className="text-sm font-semibold text-slate-500">
+                  {resolvedLang === "ja" ? "レポート一覧を読み込み中..." : "Loading shared reports..."}
+                </span>
+              </div>
+            ) : showcaseList.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 space-y-4 bg-white border border-slate-150 rounded-2xl p-6 text-center" id="showcase-empty">
+                <div className="p-4 bg-slate-50 text-slate-400 rounded-full">
+                  <Globe className="w-10 h-10" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-slate-800 font-bold text-sm">
+                    {resolvedLang === "ja" ? "共有レポートはまだありません" : "No shared reports yet"}
+                  </h3>
+                  <p className="text-slate-500 text-xs max-w-xs leading-relaxed">
+                    {resolvedLang === "ja" 
+                      ? "リポジトリの解析詳細画面にある「みんなに公開」ボタンから、あなたのレポートを最初に共有してみませんか？" 
+                      : "Be the first to publish a report using the share button on the repository analysis page!"}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="showcase-grid">
+                {showcaseList.map((item: any) => (
+                  <div
+                    key={item.id}
+                    onClick={() => {
+                      setSharedLoading(true);
+                      fetch(`/api/share?id=${item.id}`)
+                        .then(res => {
+                          if (!res.ok) throw new Error("Failed to fetch shared details");
+                          return res.json();
+                        })
+                        .then(sharedData => {
+                          const repoObj: Repository = {
+                            id: sharedData.repo?.id || Math.random().toString(),
+                            name: sharedData.repo?.name || sharedData.repo?.fullName?.split("/")[1] || "shared",
+                            fullName: sharedData.repo?.fullName || sharedData.repo || "shared-repo",
+                            source: sharedData.repo?.source || "github",
+                            owner: sharedData.repo?.owner || {
+                              login: (sharedData.repo?.fullName || sharedData.repo || "owner/repo").split("/")[0],
+                              avatarUrl: "",
+                              htmlUrl: ""
+                            },
+                            htmlUrl: sharedData.repo?.htmlUrl || "",
+                            description: sharedData.repo?.description || "",
+                            stargazersCount: sharedData.repo?.stargazersCount || sharedData.stars || 0,
+                            forksCount: sharedData.repo?.forksCount || 0,
+                            watchersCount: sharedData.repo?.watchersCount || 0,
+                            openIssuesCount: sharedData.repo?.openIssuesCount || 0,
+                            language: sharedData.repo?.language || null,
+                            topics: sharedData.repo?.topics || [],
+                            updatedAt: sharedData.repo?.updatedAt || new Date().toISOString(),
+                            createdAt: sharedData.repo?.createdAt || new Date().toISOString(),
+                            aiTitle: sharedData.repo?.aiTitle || "",
+                            aiSummary: sharedData.repo?.aiSummary || "",
+                            aiTags: sharedData.repo?.aiTags || []
+                          };
+                          setSelectedRepo(repoObj);
+                          setSharedReportData(sharedData.data);
+                          setIsSharedView(true);
+                          
+                          // Set URL history so reload works
+                          const url = new URL(window.location.href);
+                          url.searchParams.set("share", item.id);
+                          window.history.pushState({}, "", url.pathname + url.search);
+                        })
+                        .catch(err => {
+                          console.log("Failed to load details from showcase:", err);
+                          alert(resolvedLang === "ja" ? "レポートの読み込みに失敗したわ。" : "Failed to load report.");
+                        })
+                        .finally(() => {
+                          setSharedLoading(false);
+                        });
+                    }}
+                    className="bg-white border border-slate-150 rounded-2xl p-5 hover:shadow-md hover:border-indigo-200 transition cursor-pointer flex flex-col justify-between group h-full relative"
+                  >
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-1.5 text-[10px] text-slate-400 font-mono">
+                          {item.repo?.source === "gitlab" ? <Gitlab className="w-3 h-3 text-orange-500" /> : <Github className="w-3 h-3 text-slate-700" />}
+                          <span>{item.repo?.source || "github"}</span>
+                        </div>
+                        {item.stars > 0 && (
+                          <div className="flex items-center space-x-0.5 text-xs text-amber-500 font-semibold bg-amber-50/50 px-2 py-0.5 rounded-full border border-amber-100/70">
+                            <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
+                            <span>{item.stars.toLocaleString()}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="space-y-1">
+                        <h3 className="font-bold text-slate-800 group-hover:text-indigo-600 transition text-sm sm:text-base leading-snug break-all">
+                          {item.repo?.fullName || item.repo}
+                        </h3>
+                        <p className="text-slate-500 text-xs line-clamp-3 leading-relaxed">
+                          {item.summary || (resolvedLang === "ja" ? "AI要約はまだありません。" : "No AI summary available.")}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="pt-4 mt-auto border-t border-slate-100 flex items-center justify-between">
+                      <span className="text-[10px] text-slate-400 font-mono">
+                        {new Date(item.timestamp).toLocaleDateString(resolvedLang === "ja" ? "ja-JP" : "en-US", {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric"
+                        })}
+                      </span>
+                      <span className="text-xs font-bold text-indigo-600 group-hover:translate-x-1 transition flex items-center space-x-1">
+                        <span>{resolvedLang === "ja" ? "レポートを読む" : "Read Report"}</span>
+                        <span>➔</span>
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
                 <div className="space-y-6" id="trending-content-wrapper">
                   {trendingSummary && (
                     <p className="text-slate-600 text-xs bg-indigo-50/60 border border-indigo-100/70 rounded-2xl p-4 leading-relaxed font-medium" id="trending-summary-para">

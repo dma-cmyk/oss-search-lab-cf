@@ -184,6 +184,39 @@ export default function RepoDetailView({
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [repository, lang, geminiApiKey, selectedModel, personaPrompt, audiencePrompt, savedDetail]);
 
+  const [sharing, setSharing] = useState(false);
+  const [copiedShareLink, setCopiedShareLink] = useState(false);
+
+  const handleShareToShowcase = async () => {
+    if (!detail) return;
+    setSharing(true);
+    try {
+      const response = await fetch("/api/share", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          repo: repository,
+          data: detail,
+          stars: repository.stargazersCount,
+          summary: detail.overview?.slice(0, 120) + "..."
+        })
+      });
+      if (!response.ok) throw new Error("Failed to generate share link");
+      const resData = await response.json();
+      
+      const absoluteShareUrl = `${window.location.origin}${window.location.pathname}?share=${resData.id}`;
+      await navigator.clipboard.writeText(absoluteShareUrl);
+      
+      setCopiedShareLink(true);
+      setTimeout(() => setCopiedShareLink(false), 3000);
+    } catch (err) {
+      console.error("Share error:", err);
+      alert(lang === "ja" ? "共有リンクの作成に失敗したわ。" : "Failed to create share link.");
+    } finally {
+      setSharing(false);
+    }
+  };
+
   const shareUrl = `${window.location.origin}${window.location.pathname}?source=${repository.source}&repo=${encodeURIComponent(repository.fullName)}&model=${encodeURIComponent(selectedModel)}`;
 
   const handleCopyLink = () => {
@@ -235,6 +268,28 @@ export default function RepoDetailView({
           id="detail-header-right"
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
+          {detail && (
+            <button
+              type="button"
+              onClick={handleShareToShowcase}
+              disabled={sharing}
+              className={`p-2 rounded-full border transition cursor-pointer flex items-center justify-center w-8.5 h-8.5 sm:w-9 sm:h-9 ${
+                copiedShareLink
+                  ? "bg-emerald-50 border-emerald-200 text-emerald-600"
+                  : "bg-indigo-50 border-indigo-200 text-indigo-600 hover:bg-indigo-100 hover:text-indigo-900"
+              }`}
+              title={lang === "ja" ? "みんなに公開 (ショーケースに追加＆リンクコピー)" : "Publish to Showcase & Copy Link"}
+            >
+              {sharing ? (
+                <RefreshCw className="w-4 h-4 animate-spin" />
+              ) : copiedShareLink ? (
+                <Check className="w-4 h-4" />
+              ) : (
+                <Share2 className="w-4 h-4" />
+              )}
+            </button>
+          )}
+
           <button
             type="button"
             onClick={handleCopyLink}

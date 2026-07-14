@@ -2995,6 +2995,158 @@ Generate a refined name (concise and elegant) and a highly detailed prompt instr
   }
 });
 
+// ==================== SHARE & SHOWCASE APIS (R2/Local Fallback) ====================
+// 共有用のインデックスおよび個別JSONをR2またはローカルディレクトリに保存・取得するわ♡
+
+const SHARES_DIR = path.join(process.cwd(), "shares");
+
+// R2からデータを読み込む、またはローカルファイルから読み込むヘルパーよ♡
+async function readShareFile(key: string): Promise<string | null> {
+  const r2 = globalThis.cloudflareEnv?.OSS_SEARCH_LAB_R2;
+  if (r2) {
+    try {
+      const obj = await r2.get(key);
+      if (!obj) return null;
+      return await obj.text();
+    } catch (err) {
+      console.log(`R2 read error for key: ${key}`, err);
+      return null;
+    }
+  } else {
+    // ローカルフォールバック
+    const filePath = path.join(SHARES_DIR, key.replace(/\//g, path.sep));
+    if (fs.existsSync(filePath)) {
+      return fs.readFileSync(filePath, "utf-8");
+    }
+    return null;
+  }
+}
+
+// R2にデータを書き込む、またはローカルファイルに書き込むヘルパーよ♡
+async function writeShareFile(key: string, data: string, contentType: string = "application/json"): Promise<boolean> {
+  const r2 = globalThis.cloudflareEnv?.OSS_SEARCH_LAB_R2;
+  if (r2) {
+    try {
+      await r2.put(key, data, {
+        httpMetadata: { contentType }
+      });
+      return true;
+    } catch (err) {
+      console.log(`R2 write error for key: ${key}`, err);
+      return false;
+    }
+  } else {
+    // ローカルフォールバック
+    const filePath = path.join(SHARES_DIR, key.replace(/\//g, path.sep));
+    const dir = path.dirname(filePath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(filePath, data, "utf-8");
+    return true;
+  }
+}
+
+// 1. 共有リンクの新規作成（R2に保存 ＆ インデックス追記）
+app.post("/api/share", async (req, res) => {
+  try {
+    const { repo, data, stars, summary } = req.body;
+    if (!repo || !data) {
+      return res.status(400).json({ error: "repo and data are required" });
+    }
+
+    // ランダムな共有用ID（sh_xxxx）を生成
+    const id = `sh_${Math.random().toString(36).substring(2, 10)}${Date.now().toString(36).substring(4)}`;
+
+    const record = {
+      id,
+      repo,
+      timestamp: new Date().toISOString(),
+      data, // AIが作った詳細レポートの中身
+      stars: stars || 0,
+      summary: summary || ""
+    };
+
+    // ① 詳細データを保存
+    await writeShareFile(`shares/${id}.json`, JSON.stringify(record, null, 2));
+
+    // ② 一覧用のインデックスを更新
+    const indexStr = await readShareFile("shares_index.json");
+    let indexList: any[] = [];
+    if (indexStr) {
+      try {
+        indexList = JSON.parse(indexStr);
+      } catch (e) {
+        indexList = [];
+      }
+    }
+
+    // 一覧に必要な軽量メタデータだけを先頭に挿入するわ♡
+    indexList.unshift({
+      id,
+      repo,
+      timestamp: record.timestamp,
+      stars: record.stars,
+      summary: record.summary
+    });
+
+    // 最大500件程度でローテーションしてバケット容量を節約するわよ♡
+    if (indexList.length > 500) {
+      indexList = indexList.slice(0, 500);
+    }
+
+    await writeShareFile("shares_index.json", JSON.stringify(indexList, null, 2));
+
+    return res.json({
+      status: "success",
+      id,
+      shareUrl: `?share=${id}`
+    });
+  } catch (error: any) {
+    console.error("Failed to share report:", error);
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// 2. 共有データの取得
+app.get("/api/share", async (req, res) => {
+  try {
+    const id = req.query.id as string;
+    if (!id) {
+      return res.status(400).json({ error: "id is required" });
+    }
+
+    // 悪意あるパス遷移攻撃（../../など）を簡単に防ぐチェックよ♡
+    if (!/^[a-zA-Z0-9_-]+$/.test(id.replace("sh_", ""))) {
+      return res.status(400).json({ error: "Invalid share ID format" });
+    }
+
+    const content = await readShareFile(`shares/${id}.json`);
+    if (!content) {
+      return res.status(404).json({ error: "Share not found" });
+    }
+
+    return res.type("json").send(content);
+  } catch (error) {
+    console.error("Failed to read share:", error);
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// 3. 共有インデックス一覧（みんなのレポート）の取得
+app.get("/api/share/list", async (req, res) => {
+  try {
+    const content = await readShareFile("shares_index.json");
+    if (!content) {
+      return res.json([]);
+    }
+    return res.type("json").send(content);
+  } catch (error) {
+    console.error("Failed to read share index:", error);
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
 let server: any;
 let handler: any;
 
