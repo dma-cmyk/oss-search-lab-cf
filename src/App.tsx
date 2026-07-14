@@ -1579,7 +1579,64 @@ export default function App() {
                 <div className="p-4 bg-slate-100 border border-slate-200 rounded-2xl text-xs text-slate-500 text-center" id="trending-error-container">
                   {trendingError}
                 </div>
-              ) : mode === "showcase" ? (
+              ) : (
+                <div className="space-y-6" id="trending-content-wrapper">
+                  {trendingSummary && (
+                    <p className="text-slate-600 text-xs bg-indigo-50/60 border border-indigo-100/70 rounded-2xl p-4 leading-relaxed font-medium" id="trending-summary-para">
+                      ✨ <span className="font-semibold text-indigo-900">{trendingTitle || t.trendingSummaryTitle}:</span> {trendingSummary}
+                    </p>
+                  )}
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="trending-repositories-grid">
+                    {trendingRepos.map((repo, index) => {
+                      const isBookmarked = bookmarks.some((b) => b.id === repo.id && b.source === repo.source);
+                      return (
+                        <RepositoryCard
+                          key={`${repo.source}_${repo.id}`}
+                          repository={repo}
+                          rank={index + 1}
+                          onDeepDive={handleOpenRepoDetail}
+                          isBookmarked={isBookmarked}
+                          onToggleBookmark={handleToggleBookmark}
+                          lang={resolvedLang}
+                          onTagClick={handleTagClick}
+                        />
+                      );
+                    })}
+                  </div>
+
+                  {/* Infinite Scroll target and loader indicator for trending */}
+                  <div className="pt-4 pb-8 flex flex-col items-center justify-center space-y-2" id="trending-infinite-scroll-container">
+                    {trendingLoadingMore && (
+                      <div className="flex items-center space-x-2 bg-indigo-50/60 border border-indigo-100/50 rounded-full px-4 py-2 shadow-sm animate-pulse" id="trending-loading-more-spinner">
+                        <Sparkles className="w-4 h-4 text-indigo-500 animate-spin" />
+                        <span className="text-xs font-semibold text-indigo-700">
+                          {loadingStatus || (resolvedLang === "ja" ? "急上昇リポジトリを追加読み込み中..." : "Loading more trending repositories...")}
+                        </span>
+                      </div>
+                    )}
+                    
+                    {trendingHasMore && trendingRepos.length > 0 && (
+                      <div ref={trendingObserverRef} className="h-4 w-full opacity-0" id="trending-infinite-scroll-trigger" />
+                    )}
+
+                    {trendingLoadMoreError && (
+                      <p className="text-red-500 text-[11px] text-center mt-2 font-medium" id="trending-load-more-error">
+                        ⚠️ {resolvedLang === "ja" ? "追加読み込みエラー: " : "Error loading more: "}{trendingLoadMoreError}
+                      </p>
+                    )}
+
+                    {!trendingHasMore && trendingRepos.length > 0 && (
+                      <p className="text-slate-400 text-[11px] text-center mt-2 font-medium" id="trending-no-more-indicator">
+                        ✨ {resolvedLang === "ja" ? "すべての急上昇リポジトリを表示しました。" : "You have reached the end of the trending list."}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : mode === "showcase" ? (
           /* ==================== SHOWCASE VIEW ==================== */
           <div className="flex-1 p-4 sm:p-6 md:p-8 max-w-7xl mx-auto w-full space-y-6" id="showcase-view-wrapper">
             <div className="border-b border-slate-200 pb-4">
@@ -1715,63 +1772,6 @@ export default function App() {
                 ))}
               </div>
             )}
-          </div>
-        ) : (
-                <div className="space-y-6" id="trending-content-wrapper">
-                  {trendingSummary && (
-                    <p className="text-slate-600 text-xs bg-indigo-50/60 border border-indigo-100/70 rounded-2xl p-4 leading-relaxed font-medium" id="trending-summary-para">
-                      ✨ <span className="font-semibold text-indigo-900">{trendingTitle || t.trendingSummaryTitle}:</span> {trendingSummary}
-                    </p>
-                  )}
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="trending-repositories-grid">
-                    {trendingRepos.map((repo, index) => {
-                      const isBookmarked = bookmarks.some((b) => b.id === repo.id && b.source === repo.source);
-                      return (
-                        <RepositoryCard
-                          key={`${repo.source}_${repo.id}`}
-                          repository={repo}
-                          rank={index + 1}
-                          onDeepDive={handleOpenRepoDetail}
-                          isBookmarked={isBookmarked}
-                          onToggleBookmark={handleToggleBookmark}
-                          lang={resolvedLang}
-                          onTagClick={handleTagClick}
-                        />
-                      );
-                    })}
-                  </div>
-
-                  {/* Infinite Scroll target and loader indicator for trending */}
-                  <div className="pt-4 pb-8 flex flex-col items-center justify-center space-y-2" id="trending-infinite-scroll-container">
-                    {trendingLoadingMore && (
-                      <div className="flex items-center space-x-2 bg-indigo-50/60 border border-indigo-100/50 rounded-full px-4 py-2 shadow-sm animate-pulse" id="trending-loading-more-spinner">
-                        <Sparkles className="w-4 h-4 text-indigo-500 animate-spin" />
-                        <span className="text-xs font-semibold text-indigo-700">
-                          {loadingStatus || (resolvedLang === "ja" ? "急上昇リポジトリを追加読み込み中..." : "Loading more trending repositories...")}
-                        </span>
-                      </div>
-                    )}
-                    
-                    {trendingHasMore && trendingRepos.length > 0 && (
-                      <div ref={trendingObserverRef} className="h-4 w-full opacity-0" id="trending-infinite-scroll-trigger" />
-                    )}
-
-                    {trendingLoadMoreError && (
-                      <p className="text-red-500 text-[11px] text-center mt-2 font-medium" id="trending-load-more-error">
-                        ⚠️ {resolvedLang === "ja" ? "追加読み込みエラー: " : "Error loading more: "}{trendingLoadMoreError}
-                      </p>
-                    )}
-
-                    {!trendingHasMore && trendingRepos.length > 0 && (
-                      <p className="text-slate-400 text-[11px] text-center mt-2 font-medium" id="trending-no-more-indicator">
-                        ✨ {resolvedLang === "ja" ? "すべての急上昇リポジトリを表示しました。" : "You have reached the end of the trending list."}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
           </div>
         ) : (
           /* ==================== SEARCH RESULTS VIEW ==================== */
