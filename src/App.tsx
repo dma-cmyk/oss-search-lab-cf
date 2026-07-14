@@ -2301,6 +2301,27 @@ export default function App() {
 
               {/* Drawer Navigation List */}
               <div className="space-y-2">
+                {/* Showcase */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode("showcase");
+                    setShowSavedReports(false);
+                    setShowBookmarks(false);
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-bold transition ${
+                    mode === "showcase"
+                      ? "bg-indigo-50 text-indigo-700"
+                      : "hover:bg-slate-50 text-slate-600"
+                  }`}
+                >
+                  <div className="flex items-center space-x-2.5">
+                    <Globe className="w-4 h-4 text-slate-400" />
+                    <span>{resolvedLang === "ja" ? "みんなのレポート" : "Showcase"}</span>
+                  </div>
+                </button>
+
                 {/* My Library */}
                 <button
                   type="button"
