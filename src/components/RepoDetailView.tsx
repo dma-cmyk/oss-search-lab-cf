@@ -206,8 +206,8 @@ export default function RepoDetailView({
   return (
     <div className="flex-1 flex flex-col bg-[#fcfbf9] min-h-screen text-slate-900 selection:bg-indigo-100 selection:text-indigo-900" id="repo-detail-view-container">
       {/* Editorial Navigation Sticky Header */}
-      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-8 py-3.5 flex items-center justify-between" id="detail-view-header">
-        <div className="flex items-center space-x-3 sm:space-x-4 min-w-0">
+      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-8 py-2.5 sm:py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4" id="detail-view-header">
+        <div className="flex items-center justify-between sm:justify-start space-x-3 sm:space-x-4 min-w-0 w-full sm:w-auto" id="detail-header-left">
           <button
             type="button"
             onClick={onClose}
@@ -220,9 +220,9 @@ export default function RepoDetailView({
             <span className="text-xs font-bold sm:hidden">{lang === "ja" ? "戻る" : "Back"}</span>
           </button>
           
-          <div className="h-4 w-px bg-slate-200 hidden sm:block"></div>
+          <div className="h-4 w-px bg-slate-200"></div>
 
-          <div className="flex items-center space-x-2 min-w-0 hidden sm:flex">
+          <div className="flex items-center space-x-2 min-w-0">
             <span className="text-[9px] sm:text-[10px] font-mono tracking-wider sm:tracking-widest text-indigo-600 font-bold uppercase shrink-0 truncate">
               {lang === "ja" ? "技術検証特報" : "TECH ARCHIVE"}
             </span>
@@ -230,7 +230,11 @@ export default function RepoDetailView({
         </div>
 
         {/* Action Controls */}
-        <div className="flex items-center space-x-1.5 sm:space-x-2 shrink-0">
+        <div 
+          className="flex items-center space-x-1.5 sm:space-x-2 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0 justify-start sm:justify-end shrink-0" 
+          id="detail-header-right"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
           <button
             type="button"
             onClick={handleCopyLink}
@@ -247,7 +251,7 @@ export default function RepoDetailView({
           <button
             type="button"
             onClick={handleTweet}
-            className="hidden sm:flex p-2 rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-[#1DA1F2] hover:text-white hover:border-[#1DA1F2] transition cursor-pointer items-center justify-center w-8.5 h-8.5 sm:w-9 sm:h-9"
+            className="flex p-2 rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-[#1DA1F2] hover:text-white hover:border-[#1DA1F2] transition cursor-pointer items-center justify-center w-8.5 h-8.5 sm:w-9 sm:h-9"
             title={lang === "ja" ? "Xでシェア" : "Share on X"}
           >
             <Twitter className="w-4 h-4" />
@@ -272,7 +276,7 @@ export default function RepoDetailView({
             type="button"
             onClick={() => fetchDetail(true)}
             disabled={loading}
-            className="hidden sm:flex p-2 sm:px-4 sm:py-2 rounded-full border text-xs font-bold items-center justify-center transition cursor-pointer w-8.5 h-8.5 sm:w-auto bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900 disabled:opacity-50"
+            className="flex p-2 sm:px-4 sm:py-2 rounded-full border text-xs font-bold items-center justify-center transition cursor-pointer w-8.5 h-8.5 sm:w-auto bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900 disabled:opacity-50"
             title={lang === "ja" ? "AIで詳細解析を再生成" : "Regenerate detailed analysis with AI"}
           >
             <RefreshCw className={`w-4 h-4 shrink-0 text-slate-400 ${loading ? "animate-spin text-indigo-500" : ""}`} />
