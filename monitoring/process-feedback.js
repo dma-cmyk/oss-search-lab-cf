@@ -20,7 +20,8 @@ const CLASSIFIED_FILE = path.join(MONITOR_DIR, 'classified-feedbacks.json');
 
 // デフォルト設定
 let config = {
-  spreadsheetUrl: '' // Webに公開されたCSV用のURL
+  spreadsheetUrl: '', // Webに公開されたCSV用のURL
+  gasUrl: '' // スプレッドシート自動チェック用のGASウェブアプリURL
 };
 
 // 設定のロード
@@ -160,6 +161,30 @@ async function analyzeFeedback(feedbackText, feedbackType) {
   }
 }
 
+// Google Apps Script (GAS) 経由でスプレッドシートに確認済みマークを付けるわ♡
+async function markAsProcessedInSpreadsheet(timestamp) {
+  if (!config.gasUrl) return;
+  try {
+    const res = await fetch(config.gasUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ timestamp })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.status === 'success') {
+        console.log('📬 [GAS] スプレッドシートに確認済みチェックを入れたわよ！');
+      } else {
+        console.log('⚠️ [GAS] スプレッドシート側の更新でエラーが出たみたい（未検出など）。');
+      }
+    } else {
+      console.log(`⚠️ [GAS] スプレッドシートへの通信に失敗したわ (HTTP ${res.status})`);
+    }
+  } catch (err) {
+    console.error('⚠️ [GAS] スプレッドシートへの送信中にエラーが発生したわ:', err);
+  }
+}
+
 async function main() {
   console.log('\n💠 —————— ヴィーナス・フィードバック自動仕分け (専用監視フォルダ版) —————— 💠');
   
@@ -263,6 +288,9 @@ async function main() {
       // 【完全自動仕分け】対話なしで自動的に処理済みにマークするわ！
       processedFeedbacks.push(timestamp);
       fs.writeFileSync(PROCESSED_FILE, JSON.stringify(processedFeedbacks, null, 2), 'utf-8');
+      
+      // Google Apps Script 経由でスプレッドシートのチェックを入れるわ♡
+      await markAsProcessedInSpreadsheet(timestamp);
       
       // 仕分けた結果を履歴ファイルに綺麗に追記保存するわ♡
       let classifiedList = [];
