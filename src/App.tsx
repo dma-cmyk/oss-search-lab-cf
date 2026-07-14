@@ -133,6 +133,12 @@ export default function App() {
   const [showcaseSearch, setShowcaseSearch] = useState("");
   const [showcaseSort, setShowcaseSort] = useState<"latest" | "stars" | "count">("latest");
   const [selectedShowcaseRepo, setSelectedShowcaseRepo] = useState<any | null>(null);
+  
+  // Showcase Infinite Scroll Pagination
+  const [visibleShowcaseReposCount, setVisibleShowcaseReposCount] = useState(12);
+  const [visibleShowcaseSharesCount, setVisibleShowcaseSharesCount] = useState(12);
+  const showcaseReposObserverRef = useRef<HTMLDivElement | null>(null);
+  const showcaseSharesObserverRef = useRef<HTMLDivElement | null>(null);
 
   // Pagination States
   const [page, setPage] = useState(1);
@@ -700,6 +706,65 @@ export default function App() {
         });
     }
   }, [mode]);
+
+  // Reset pagination count on search/sort/selection change
+  useEffect(() => {
+    setVisibleShowcaseReposCount(12);
+  }, [showcaseSearch, showcaseSort, mode]);
+
+  useEffect(() => {
+    setVisibleShowcaseSharesCount(12);
+  }, [selectedShowcaseRepo]);
+
+  // Infinite scroll observer for repository list
+  useEffect(() => {
+    if (mode !== "showcase" || selectedShowcaseRepo) return;
+    
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisibleShowcaseReposCount((prev) => prev + 12);
+        }
+      },
+      { threshold: 0.1 }
+    );
+    
+    const currentTarget = showcaseReposObserverRef.current;
+    if (currentTarget) {
+      observer.observe(currentTarget);
+    }
+    
+    return () => {
+      if (currentTarget) {
+        observer.unobserve(currentTarget);
+      }
+    };
+  }, [mode, selectedShowcaseRepo, showcaseList, showcaseSearch, showcaseSort]);
+
+  // Infinite scroll observer for shares list
+  useEffect(() => {
+    if (mode !== "showcase" || !selectedShowcaseRepo) return;
+    
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisibleShowcaseSharesCount((prev) => prev + 12);
+        }
+      },
+      { threshold: 0.1 }
+    );
+    
+    const currentTarget = showcaseSharesObserverRef.current;
+    if (currentTarget) {
+      observer.observe(currentTarget);
+    }
+    
+    return () => {
+      if (currentTarget) {
+        observer.unobserve(currentTarget);
+      }
+    };
+  }, [mode, selectedShowcaseRepo]);
 
   // Fetch trending repositories
   useEffect(() => {
@@ -1800,7 +1865,7 @@ export default function App() {
 
                       {/* Shares Grid */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6" id="showcase-shares-grid">
-                        {sharesList.map((share: any) => (
+                        {sharesList.slice(0, visibleShowcaseSharesCount).map((share: any) => (
                           <div
                             key={share.id}
                             onClick={() => {
@@ -1889,6 +1954,16 @@ export default function App() {
                           </div>
                         ))}
                       </div>
+
+                      {/* Infinite Scroll Trigger */}
+                      {sharesList.length > visibleShowcaseSharesCount && (
+                        <div ref={showcaseSharesObserverRef} className="h-12 flex items-center justify-center py-4" id="showcase-shares-load-more-trigger">
+                          <div className="flex items-center space-x-2 text-xs text-slate-400 font-medium bg-slate-50 px-4 py-2 rounded-full border border-slate-100">
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin text-indigo-500" />
+                            <span>{resolvedLang === "ja" ? "さらに読み込み中..." : "Loading more reports..."}</span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 }
@@ -1954,53 +2029,65 @@ export default function App() {
                       </div>
                     ) : (
                       /* Repositories Grid (First Level) */
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="showcase-repos-grid">
-                        {filteredRepos.map((group: any) => (
-                          <div
-                            key={group.fullName}
-                            onClick={() => setSelectedShowcaseRepo(group)}
-                            className="bg-white border border-slate-155 hover:border-indigo-200 hover:shadow-md rounded-2xl p-5 transition cursor-pointer flex flex-col justify-between group h-full relative min-h-[160px]"
-                          >
-                            <div className="space-y-3">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center space-x-1.5 text-[10px] text-slate-400 font-mono">
-                                  {group.repo?.source === "gitlab" ? <Gitlab className="w-3 h-3 text-orange-500" /> : <Github className="w-3 h-3 text-slate-700" />}
-                                  <span>{group.repo?.source || "github"}</span>
-                                </div>
-                                {group.stars > 0 && (
-                                  <div className="flex items-center space-x-0.5 text-xs text-amber-500 font-semibold bg-amber-50/50 px-2 py-0.5 rounded-full border border-amber-100/70">
-                                    <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
-                                    <span>{group.stars.toLocaleString()}</span>
+                      <div className="space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="showcase-repos-grid">
+                          {filteredRepos.slice(0, visibleShowcaseReposCount).map((group: any) => (
+                            <div
+                              key={group.fullName}
+                              onClick={() => setSelectedShowcaseRepo(group)}
+                              className="bg-white border border-slate-155 hover:border-indigo-200 hover:shadow-md rounded-2xl p-5 transition cursor-pointer flex flex-col justify-between group h-full relative min-h-[160px]"
+                            >
+                              <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center space-x-1.5 text-[10px] text-slate-400 font-mono">
+                                    {group.repo?.source === "gitlab" ? <Gitlab className="w-3 h-3 text-orange-500" /> : <Github className="w-3 h-3 text-slate-700" />}
+                                    <span>{group.repo?.source || "github"}</span>
                                   </div>
-                                )}
+                                  {group.stars > 0 && (
+                                    <div className="flex items-center space-x-0.5 text-xs text-amber-500 font-semibold bg-amber-50/50 px-2 py-0.5 rounded-full border border-amber-100/70">
+                                      <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
+                                      <span>{group.stars.toLocaleString()}</span>
+                                    </div>
+                                  )}
+                                </div>
+
+                                <div className="space-y-1">
+                                  <h3 className="font-bold text-slate-800 group-hover:text-indigo-600 transition text-sm sm:text-base leading-snug break-all">
+                                    {group.fullName}
+                                  </h3>
+                                  {group.repo?.aiTitle && (
+                                    <p className="text-[10px] text-indigo-600 font-bold tracking-tight">
+                                      {group.repo.aiTitle}
+                                    </p>
+                                  )}
+                                  <p className="text-slate-500 text-xs line-clamp-3 leading-relaxed">
+                                    {group.repo?.aiSummary || group.repo?.description || (resolvedLang === "ja" ? "説明文はありません。" : "No description available.")}
+                                  </p>
+                                </div>
                               </div>
 
-                              <div className="space-y-1">
-                                <h3 className="font-bold text-slate-800 group-hover:text-indigo-600 transition text-sm sm:text-base leading-snug break-all">
-                                  {group.fullName}
-                                </h3>
-                                {group.repo?.aiTitle && (
-                                  <p className="text-[10px] text-indigo-600 font-bold tracking-tight">
-                                    {group.repo.aiTitle}
-                                  </p>
-                                )}
-                                <p className="text-slate-500 text-xs line-clamp-3 leading-relaxed">
-                                  {group.repo?.aiSummary || group.repo?.description || (resolvedLang === "ja" ? "説明文はありません。" : "No description available.")}
-                                </p>
+                              <div className="pt-4 mt-auto border-t border-slate-100 flex items-center justify-between">
+                                <span className="text-[10px] bg-indigo-50 text-indigo-700 font-bold px-2 py-0.5 rounded-full border border-indigo-100/50">
+                                  {resolvedLang === "ja" ? `共有数: ${group.shares.length}件` : `Reports: ${group.shares.length}`}
+                                </span>
+                                <span className="text-xs font-bold text-indigo-600 group-hover:translate-x-1 transition flex items-center space-x-1">
+                                  <span>{resolvedLang === "ja" ? "レポート一覧" : "View Reports"}</span>
+                                  <span>➔</span>
+                                </span>
                               </div>
                             </div>
+                          ))}
+                        </div>
 
-                            <div className="pt-4 mt-auto border-t border-slate-100 flex items-center justify-between">
-                              <span className="text-[10px] bg-indigo-50 text-indigo-700 font-bold px-2 py-0.5 rounded-full border border-indigo-100/50">
-                                {resolvedLang === "ja" ? `共有数: ${group.shares.length}件` : `Reports: ${group.shares.length}`}
-                              </span>
-                              <span className="text-xs font-bold text-indigo-600 group-hover:translate-x-1 transition flex items-center space-x-1">
-                                <span>{resolvedLang === "ja" ? "レポート一覧" : "View Reports"}</span>
-                                <span>➔</span>
-                              </span>
+                        {/* Infinite Scroll Trigger */}
+                        {filteredRepos.length > visibleShowcaseReposCount && (
+                          <div ref={showcaseReposObserverRef} className="h-12 flex items-center justify-center py-4" id="showcase-repos-load-more-trigger">
+                            <div className="flex items-center space-x-2 text-xs text-slate-400 font-medium bg-slate-50 px-4 py-2 rounded-full border border-slate-100">
+                              <RefreshCw className="w-3.5 h-3.5 animate-spin text-indigo-500" />
+                              <span>{resolvedLang === "ja" ? "さらに読み込み中..." : "Loading more repositories..."}</span>
                             </div>
                           </div>
-                        ))}
+                        )}
                       </div>
                     )}
                   </div>
