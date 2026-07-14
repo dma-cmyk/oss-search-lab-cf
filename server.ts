@@ -3141,7 +3141,44 @@ app.get("/api/share/list", async (req, res) => {
     if (!content) {
       return res.json([]);
     }
-    return res.type("json").send(content);
+    
+    let indexList: any[] = [];
+    try {
+      indexList = JSON.parse(content);
+    } catch (e) {
+      return res.json([]);
+    }
+
+    // 古いデータ（titleが無いもの）があれば、自動で詳細ファイルからtitleを読み取って修復するわよ♡
+    let needsUpdate = false;
+    for (let item of indexList) {
+      if (!item.title) {
+        try {
+          const detailStr = await readShareFile(`shares/${item.id}.json`);
+          if (detailStr) {
+            const detailObj = JSON.parse(detailStr);
+            item.title = detailObj.data?.title || item.repo?.aiTitle || "AI Analysis Report";
+            needsUpdate = true;
+          }
+        } catch (err) {
+          console.error(`Failed to migrate index item ${item.id}:`, err);
+          // エラー時は簡易タイトルをフォールバックに設定して無限ループを防ぐわ
+          item.title = item.repo?.aiTitle || "AI Analysis Report";
+          needsUpdate = true;
+        }
+      }
+    }
+
+    if (needsUpdate) {
+      try {
+        await writeShareFile("shares_index.json", JSON.stringify(indexList, null, 2));
+        console.log("Migrated missing titles in shares_index.json successfully!");
+      } catch (writeErr) {
+        console.error("Failed to write migrated shares_index.json:", writeErr);
+      }
+    }
+
+    return res.json(indexList);
   } catch (error) {
     console.error("Failed to read share index:", error);
     return res.status(500).json({ error: "Internal Server Error" });
