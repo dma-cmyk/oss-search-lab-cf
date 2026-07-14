@@ -1645,12 +1645,18 @@ export default function App() {
           <div className="flex-1 p-4 sm:p-6 md:p-8 max-w-7xl mx-auto w-full space-y-6" id="showcase-view-wrapper">
             <div className="border-b border-slate-200 pb-4">
               <h2 className="text-xl font-bold text-slate-800" id="showcase-title-heading">
-                {resolvedLang === "ja" ? "みんなのAIレポート" : "Shared AI Reports"}
+                {selectedShowcaseRepo 
+                  ? (resolvedLang === "ja" ? "共有されている記事一覧" : "Shared Articles")
+                  : (resolvedLang === "ja" ? "みんなのAIレポート" : "Shared AI Reports")}
               </h2>
               <p className="text-slate-500 text-xs sm:text-sm mt-1" id="showcase-subtitle">
-                {resolvedLang === "ja" 
-                  ? "世界中の開発者が共有した、OSSのAI解析レポート（技術検証特報）が集まる広場です。" 
-                  : "Explore AI-generated analysis reports shared by developers worldwide."}
+                {selectedShowcaseRepo
+                  ? (resolvedLang === "ja" 
+                      ? `「${selectedShowcaseRepo.fullName}」に対して開発者が共有したレポート一覧です。` 
+                      : `List of shared AI reports for ${selectedShowcaseRepo.fullName}.`)
+                  : (resolvedLang === "ja" 
+                      ? "世界中の開発者が共有した、OSSのAI解析レポート（技術検証特報）が集まる広場です。" 
+                      : "Explore AI-generated analysis reports shared by developers worldwide.")}
               </p>
             </div>
 
