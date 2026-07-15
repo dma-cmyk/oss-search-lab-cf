@@ -1299,6 +1299,19 @@ export default function App() {
           savedReports={savedReports}
           onSaveReport={(detailData) => handleSaveReport(selectedRepo, detailData)}
           onOpenSettings={() => setIsSettingsOpen(true)}
+          onUpdateRepository={(updatedRepo) => {
+            setSelectedRepo(updatedRepo);
+            setBookmarks(prev => {
+              const exists = prev.some(b => b.id === updatedRepo.id && b.source === updatedRepo.source);
+              if (exists) {
+                const next = prev.map(b => b.id === updatedRepo.id && b.source === updatedRepo.source ? updatedRepo : b);
+                localStorage.setItem("oss_search_bookmarks_v1", JSON.stringify(next));
+                return next;
+              }
+              return prev;
+            });
+            setRepositories(prev => prev.map(r => r.id === updatedRepo.id && r.source === updatedRepo.source ? updatedRepo : r));
+          }}
         />
         <SettingsModal
           isOpen={isSettingsOpen}
@@ -2056,13 +2069,13 @@ export default function App() {
                                   <h3 className="font-bold text-slate-800 group-hover:text-indigo-600 transition text-sm sm:text-base leading-snug break-all">
                                     {group.fullName}
                                   </h3>
-                                  {group.repo?.aiTitle && (
+                                  {(group.repo?.aiTitle || (group.shares && group.shares[0]?.title)) && (
                                     <p className="text-[10px] text-indigo-600 font-bold tracking-tight">
-                                      {group.repo.aiTitle}
+                                      {group.repo?.aiTitle || group.shares[0]?.title}
                                     </p>
                                   )}
                                   <p className="text-slate-500 text-xs line-clamp-3 leading-relaxed">
-                                    {group.repo?.aiSummary || group.repo?.description || (resolvedLang === "ja" ? "説明文はありません。" : "No description available.")}
+                                    {group.repo?.aiSummary || (group.shares && group.shares[0]?.summary) || group.repo?.description || (resolvedLang === "ja" ? "説明文はありません。" : "No description available.")}
                                   </p>
                                 </div>
                               </div>
@@ -2270,7 +2283,7 @@ export default function App() {
                                     </h4>
                                   </div>
                                   <p className="text-xs text-slate-500 line-clamp-2 mt-1 italic">
-                                    {report.repository?.aiSummary || report.repository?.description || "No description provided"}
+                                    {report.repository?.aiSummary || (report.articles && report.articles[0]?.detail?.overview) || report.repository?.description || "No description provided"}
                                   </p>
                                 </div>
 

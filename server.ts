@@ -2,6 +2,7 @@ import OpenAI from "openai";
 import * as cheerio from "cheerio";
 import express from "express";
 import path from "path";
+import fs from "fs";
 import { GoogleGenAI, Type } from "@google/genai";
 import dotenv from "dotenv";
 

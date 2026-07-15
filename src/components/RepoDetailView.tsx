@@ -48,6 +48,7 @@ interface RepoDetailViewProps {
   savedReports: SavedReport[];
   onSaveReport?: (detail: RepoDetail) => void;
   onOpenSettings: () => void;
+  onUpdateRepository?: (updatedRepo: Repository) => void;
 }
 
 export default function RepoDetailView({
@@ -66,6 +67,7 @@ export default function RepoDetailView({
   savedReports,
   onSaveReport,
   onOpenSettings,
+  onUpdateRepository,
 }: RepoDetailViewProps) {
   const [loading, setLoading] = useState(false);
   const [detail, setDetail] = useState<RepoDetail | null>(savedDetail);
@@ -164,6 +166,14 @@ export default function RepoDetailView({
       };
       
       setDetail(sanitized);
+      if (onUpdateRepository) {
+        onUpdateRepository({
+          ...repository,
+          aiTitle: sanitized.title || repository.aiTitle,
+          aiSummary: sanitized.overview || repository.aiSummary,
+          aiTags: (sanitized.features && sanitized.features.length > 0) ? sanitized.features.slice(0, 3) : repository.aiTags
+        });
+      }
     } catch (err: any) {
       console.log("Fetch detail error:", err);
       setError(err.message || "An unexpected error occurred while analyzing the repository.");
@@ -177,6 +187,14 @@ export default function RepoDetailView({
       setDetail(savedDetail);
       setLoading(false);
       setError(null);
+      if (onUpdateRepository) {
+        onUpdateRepository({
+          ...repository,
+          aiTitle: savedDetail.title || repository.aiTitle,
+          aiSummary: savedDetail.overview || repository.aiSummary,
+          aiTags: (savedDetail.features && savedDetail.features.length > 0) ? savedDetail.features.slice(0, 3) : repository.aiTags
+        });
+      }
     } else {
       fetchDetail();
     }
@@ -410,7 +428,7 @@ export default function RepoDetailView({
             <p className="text-xs text-red-600 mt-1">{error}</p>
             <button
               type="button"
-              onClick={fetchDetail}
+              onClick={() => fetchDetail()}
               className="mt-5 px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition cursor-pointer"
               id="detail-retry-btn"
             >
