@@ -166,7 +166,7 @@ export default function RepoDetailView({
       };
       
       setDetail(sanitized);
-      if (onUpdateRepository) {
+      if (onUpdateRepository && (!repository.aiSummary || !repository.aiTitle)) {
         onUpdateRepository({
           ...repository,
           aiTitle: sanitized.title || repository.aiTitle,
@@ -187,7 +187,7 @@ export default function RepoDetailView({
       setDetail(savedDetail);
       setLoading(false);
       setError(null);
-      if (onUpdateRepository) {
+      if (onUpdateRepository && (!repository.aiSummary || !repository.aiTitle)) {
         onUpdateRepository({
           ...repository,
           aiTitle: savedDetail.title || repository.aiTitle,

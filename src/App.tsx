@@ -1300,6 +1300,14 @@ export default function App() {
           onSaveReport={(detailData) => handleSaveReport(selectedRepo, detailData)}
           onOpenSettings={() => setIsSettingsOpen(true)}
           onUpdateRepository={(updatedRepo) => {
+            if (
+              selectedRepo &&
+              selectedRepo.aiTitle === updatedRepo.aiTitle &&
+              selectedRepo.aiSummary === updatedRepo.aiSummary &&
+              JSON.stringify(selectedRepo.aiTags) === JSON.stringify(updatedRepo.aiTags)
+            ) {
+              return; // No changes, skip update to prevent infinite loops
+            }
             setSelectedRepo(updatedRepo);
             setBookmarks(prev => {
               const exists = prev.some(b => b.id === updatedRepo.id && b.source === updatedRepo.source);
