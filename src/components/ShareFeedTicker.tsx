@@ -12,6 +12,58 @@ interface FeedItem {
   timestamp: string;
 }
 
+// 6大言語対応の多言語ローカライズ辞書よ♡
+const TICKER_TRANSLATIONS = {
+  ja: {
+    label: "新着共有フィード",
+    defaultTitle: (repoName: string, title: string) => `${repoName} : ${title}`,
+    justNow: "たった今",
+    minsAgo: (m: number) => `${m}分前`,
+    hoursAgo: (h: number) => `${h}時間前`,
+    today: "今日",
+  },
+  zh: {
+    label: "最新共享动态",
+    defaultTitle: (repoName: string, _title: string) => `${repoName} : 深度解析报告`,
+    justNow: "刚刚",
+    minsAgo: (m: number) => `${m}分钟前`,
+    hoursAgo: (h: number) => `${h}小时前`,
+    today: "今天",
+  },
+  es: {
+    label: "Compartidos Recientes",
+    defaultTitle: (repoName: string, _title: string) => `${repoName} : Informe de Análisis`,
+    justNow: "ahora mismo",
+    minsAgo: (m: number) => `hace ${m}m`,
+    hoursAgo: (h: number) => `hace ${h}h`,
+    today: "hoy",
+  },
+  de: {
+    label: "Kürzlich Geteilt",
+    defaultTitle: (repoName: string, _title: string) => `${repoName} : Detailanalyse-Bericht`,
+    justNow: "gerade eben",
+    minsAgo: (m: number) => `vor ${m} Min.`,
+    hoursAgo: (h: number) => `vor ${h} Std.`,
+    today: "heute",
+  },
+  fr: {
+    label: "Partages Récents",
+    defaultTitle: (repoName: string, _title: string) => `${repoName} : Rapport d'Analyse`,
+    justNow: "à l'instant",
+    minsAgo: (m: number) => `il y a ${m} min`,
+    hoursAgo: (h: number) => `il y a ${h} h`,
+    today: "aujourd'hui",
+  },
+  en: {
+    label: "Recent Shares",
+    defaultTitle: (repoName: string, _title: string) => `${repoName} : Deep Dive Analysis`,
+    justNow: "just now",
+    minsAgo: (m: number) => `${m}m ago`,
+    hoursAgo: (h: number) => `${h}h ago`,
+    today: "today",
+  }
+};
+
 export default function ShareFeedTicker({ lang }: ShareFeedTickerProps) {
   const [feed, setFeed] = useState<FeedItem[]>([]);
 
@@ -35,6 +87,10 @@ export default function ShareFeedTicker({ lang }: ShareFeedTickerProps) {
   }, []);
 
   if (feed.length === 0) return null;
+
+  // 選択されている言語のリソースを取得するわ（見つからない場合は英語にフォールバックよ）
+  const currentLang = (lang || "en").toLowerCase();
+  const t = TICKER_TRANSLATIONS[currentLang as keyof typeof TICKER_TRANSLATIONS] || TICKER_TRANSLATIONS.en;
 
   // 最新の5件を表示するわよ♡
   const displayItems = feed.slice(0, 5);
@@ -60,15 +116,11 @@ export default function ShareFeedTicker({ lang }: ShareFeedTickerProps) {
     const diffMins = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMins / 60);
 
-    const isJa = lang === "ja";
-
-    if (diffMins < 1) return isJa ? "たった今" : "just now";
-    if (diffMins < 60) return isJa ? `${diffMins}分前` : `${diffMins}m ago`;
-    if (diffHours < 24) return isJa ? `${diffHours}時間前` : `${diffHours}h ago`;
-    return isJa ? "今日" : "today";
+    if (diffMins < 1) return t.justNow;
+    if (diffMins < 60) return t.minsAgo(diffMins);
+    if (diffHours < 24) return t.hoursAgo(diffHours);
+    return t.today;
   };
-
-  const labelText = lang === "ja" ? "新着共有フィード" : "Recent Shares";
 
   return (
     <div 
@@ -81,18 +133,15 @@ export default function ShareFeedTicker({ lang }: ShareFeedTickerProps) {
           <Sparkles className="w-3 h-3 animate-pulse" />
         </span>
         <h3 className="text-[10px] font-bold text-slate-800 dark:text-slate-200 tracking-wider uppercase">
-          {labelText}
+          {t.label}
         </h3>
       </div>
       
-      {/* 2列グリッドで高さを抑えたコンパクトなリストよ♡ */}
+      {/* 多言語対応の美しい2列グリッドよ♡ */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1.5">
         {displayItems.map((item) => {
           const repoName = getRepoName(item.repo);
-          // 選択言語が日本語なら「リポジトリ名: タイトル」、英語なら「リポジトリ名: Deep Dive Analysis」などにするわ♡
-          const displayTitle = lang === "ja" 
-            ? `${repoName} : ${item.title}` 
-            : `${repoName} : Deep Dive Analysis`;
+          const displayTitle = t.defaultTitle(repoName, item.title);
 
           return (
             <div
