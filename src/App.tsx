@@ -1869,20 +1869,38 @@ export default function App() {
 
                       {/* Repository Description / AI Summary */}
                       {(selectedShowcaseRepo.repo?.aiSummary || selectedShowcaseRepo.repo?.description) && (
-                        selectedShowcaseRepo.repo?.aiSummary ? (
-                          <div className="bg-indigo-50/40 rounded-2xl p-4 border border-indigo-100/50 space-y-1.5" id="showcase-detail-ai-summary">
-                            <div className="flex items-center space-x-1.5 text-xs font-semibold text-indigo-700">
-                              <Cpu className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
-                              <span>{selectedShowcaseRepo.repo?.aiTitle || (resolvedLang === "ja" ? "AI概要" : "AI Summary")}</span>
+                        resolvedLang === "ja" ? (
+                          selectedShowcaseRepo.repo?.aiSummary ? (
+                            <div className="bg-indigo-50/40 rounded-2xl p-4 border border-indigo-100/50 space-y-1.5" id="showcase-detail-ai-summary">
+                              <div className="flex items-center space-x-1.5 text-xs font-semibold text-indigo-700">
+                                <Cpu className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                                <span>{selectedShowcaseRepo.repo?.aiTitle || "AI概要"}</span>
+                              </div>
+                              <p className="text-slate-700 text-xs sm:text-sm leading-relaxed select-text" id="showcase-detail-ai-desc">
+                                {selectedShowcaseRepo.repo.aiSummary}
+                              </p>
                             </div>
-                            <p className="text-slate-700 text-xs sm:text-sm leading-relaxed select-text" id="showcase-detail-ai-desc">
-                              {selectedShowcaseRepo.repo.aiSummary}
+                          ) : (
+                            <p className="text-slate-600 text-xs sm:text-sm bg-slate-50/80 border border-slate-100 rounded-2xl p-4 leading-relaxed" id="showcase-detail-raw-desc">
+                              {selectedShowcaseRepo.repo.description}
                             </p>
-                          </div>
+                          )
                         ) : (
-                          <p className="text-slate-600 text-xs sm:text-sm bg-slate-50/80 border border-slate-100 rounded-2xl p-4 leading-relaxed" id="showcase-detail-raw-desc">
-                            {selectedShowcaseRepo.repo.description}
-                          </p>
+                          selectedShowcaseRepo.repo?.description ? (
+                            <p className="text-slate-600 text-xs sm:text-sm bg-slate-50/80 border border-slate-100 rounded-2xl p-4 leading-relaxed" id="showcase-detail-raw-desc">
+                              {selectedShowcaseRepo.repo.description}
+                            </p>
+                          ) : (
+                            <div className="bg-indigo-50/40 rounded-2xl p-4 border border-indigo-100/50 space-y-1.5" id="showcase-detail-ai-summary">
+                              <div className="flex items-center space-x-1.5 text-xs font-semibold text-indigo-700">
+                                <Cpu className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                                <span>AI Summary</span>
+                              </div>
+                              <p className="text-slate-700 text-xs sm:text-sm leading-relaxed select-text" id="showcase-detail-ai-desc">
+                                {selectedShowcaseRepo.repo.aiSummary}
+                              </p>
+                            </div>
+                          )
                         )
                       )}
 
@@ -2081,14 +2099,27 @@ export default function App() {
                                   <h3 className="font-bold text-slate-800 group-hover:text-indigo-600 transition text-sm sm:text-base leading-snug break-all">
                                     {group.fullName}
                                   </h3>
-                                  {(group.repo?.aiTitle || (group.shares && group.shares[0]?.title)) && (
-                                    <p className="text-[10px] text-indigo-600 font-bold tracking-tight">
-                                      {group.repo?.aiTitle || group.shares[0]?.title}
-                                    </p>
+                                  {resolvedLang === "ja" ? (
+                                    <>
+                                      {(group.repo?.aiTitle || (group.shares && group.shares[0]?.title)) && (
+                                        <p className="text-[10px] text-indigo-600 font-bold tracking-tight">
+                                          {group.repo?.aiTitle || group.shares[0]?.title}
+                                        </p>
+                                      )}
+                                      <p className="text-slate-500 text-xs line-clamp-3 leading-relaxed">
+                                        {group.repo?.aiSummary || (group.shares && group.shares[0]?.summary) || group.repo?.description || "説明文はありません。"}
+                                      </p>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <p className="text-[10px] text-indigo-600 font-bold tracking-tight">
+                                        AI Analysis Report
+                                      </p>
+                                      <p className="text-slate-500 text-xs line-clamp-3 leading-relaxed">
+                                        {group.repo?.description || group.repo?.aiSummary || (group.shares && group.shares[0]?.summary) || "No description available."}
+                                      </p>
+                                    </>
                                   )}
-                                  <p className="text-slate-500 text-xs line-clamp-3 leading-relaxed">
-                                    {group.repo?.aiSummary || (group.shares && group.shares[0]?.summary) || group.repo?.description || (resolvedLang === "ja" ? "説明文はありません。" : "No description available.")}
-                                  </p>
                                 </div>
                               </div>
 
