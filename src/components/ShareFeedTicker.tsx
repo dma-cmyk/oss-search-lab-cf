@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Sparkles } from "lucide-react";
+import { Sparkles, ArrowRight } from "lucide-react";
 
 interface ShareFeedTickerProps {
   lang: string;
@@ -14,8 +14,6 @@ interface FeedItem {
 
 export default function ShareFeedTicker({ lang }: ShareFeedTickerProps) {
   const [feed, setFeed] = useState<FeedItem[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [fade, setFade] = useState(true);
 
   // 1. 新着フィードのフェッチ（15秒ごと）
   const fetchFeed = async () => {
@@ -36,29 +34,13 @@ export default function ShareFeedTicker({ lang }: ShareFeedTickerProps) {
     return () => clearInterval(interval);
   }, []);
 
-  // 2. カルーセルの切り替えとフェードアニメーション（5秒ごと）
-  useEffect(() => {
-    if (feed.length <= 1) return;
-
-    const timer = setInterval(() => {
-      setFade(false);
-      setTimeout(() => {
-        setCurrentIndex((prev) => (prev + 1) % feed.length);
-        setFade(true);
-      }, 300); // フェードアウトの時間
-    }, 5000);
-
-    return () => clearInterval(timer);
-  }, [feed]);
-
   if (feed.length === 0) return null;
 
-  const currentItem = feed[currentIndex];
-  if (!currentItem) return null;
+  // 最新の5件を表示するわよ♡
+  const displayItems = feed.slice(0, 5);
 
-  // クリックしたときはURLパラメータを書き換えてディープリンクで開くわよ♡
-  const handleClick = () => {
-    window.location.search = `?share=${currentItem.id}`;
+  const handleClick = (id: string) => {
+    window.location.search = `?share=${id}`;
   };
 
   // 時差の表記（簡易計算）
@@ -75,31 +57,44 @@ export default function ShareFeedTicker({ lang }: ShareFeedTickerProps) {
     return lang === "ja" ? "今日" : "today";
   };
 
-  const labelText = lang === "ja" ? "新着共有" : "New Share";
+  const labelText = lang === "ja" ? "新着共有フィード" : "Recent Shares";
 
   return (
     <div 
-      onClick={handleClick}
-      className="w-full max-w-3xl mx-auto mb-4 cursor-pointer flex items-center justify-between px-4 py-2.5 rounded-xl border border-indigo-200/50 bg-gradient-to-r from-indigo-50/80 via-purple-50/50 to-pink-50/30 backdrop-blur-md shadow-sm hover:shadow-md hover:border-indigo-300 transition-all duration-300 dark:from-slate-900/80 dark:via-slate-900/50 dark:to-slate-900/30 dark:border-indigo-900/30 dark:hover:border-indigo-700/50"
+      className="w-full max-w-3xl mx-auto mb-6 p-4 rounded-2xl border border-indigo-200/50 bg-gradient-to-br from-indigo-50/70 via-purple-50/40 to-pink-50/20 backdrop-blur-md shadow-sm dark:from-slate-900/80 dark:via-slate-900/60 dark:to-slate-900/40 dark:border-indigo-900/30"
       id="share-feed-ticker"
     >
-      <div className="flex items-center space-x-3 overflow-hidden flex-1">
-        {/* バッジ */}
-        <span className="flex items-center space-x-1 flex-shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-sm animate-pulse">
-          <Sparkles className="w-3 h-3" />
-          <span>{labelText}</span>
+      {/* ヘッダータイトル */}
+      <div className="flex items-center space-x-2 mb-3 pb-2 border-b border-indigo-100/50 dark:border-slate-800">
+        <span className="flex items-center justify-center p-1 rounded-lg bg-indigo-500 text-white shadow-sm">
+          <Sparkles className="w-3.5 h-3.5 animate-pulse" />
         </span>
-        
-        {/* タイトル */}
-        <div className={`flex-1 text-sm font-medium text-slate-700 dark:text-slate-200 truncate transition-opacity duration-300 ${fade ? 'opacity-100' : 'opacity-0'}`}>
-          {currentItem.title}
-        </div>
+        <h3 className="text-xs font-bold text-slate-800 dark:text-slate-200 tracking-wider uppercase">
+          {labelText}
+        </h3>
       </div>
       
-      {/* タイムスタンプ */}
-      <span className={`text-[10px] sm:text-xs text-indigo-500 dark:text-indigo-400 font-semibold ml-2 flex-shrink-0 transition-opacity duration-300 ${fade ? 'opacity-100' : 'opacity-0'}`}>
-        {getRelativeTime(currentItem.timestamp)}
-      </span>
+      {/* 5件のリスト */}
+      <div className="space-y-2">
+        {displayItems.map((item) => (
+          <div
+            key={item.id}
+            onClick={() => handleClick(item.id)}
+            className="flex items-center justify-between p-2 rounded-xl bg-white/50 dark:bg-slate-900/30 border border-transparent hover:border-indigo-200/60 hover:bg-white/90 dark:hover:bg-slate-800/80 dark:hover:border-indigo-800/50 cursor-pointer transition-all duration-200 group"
+          >
+            <div className="flex items-center space-x-2 overflow-hidden flex-1 mr-2">
+              <ArrowRight className="w-3.5 h-3.5 text-indigo-400 group-hover:translate-x-0.5 transition-transform shrink-0" />
+              <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                {item.title}
+              </span>
+            </div>
+            
+            <span className="text-[10px] text-slate-400 dark:text-slate-500 font-semibold shrink-0 ml-2">
+              {getRelativeTime(item.timestamp)}
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
