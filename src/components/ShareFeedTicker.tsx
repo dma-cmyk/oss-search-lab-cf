@@ -132,6 +132,17 @@ export default function ShareFeedTicker({ lang }: ShareFeedTickerProps) {
     window.location.search = `?share=${id}`;
   };
 
+  // タップ・クリック時の制御
+  const handleTickerClick = (id: string) => {
+    // スマホ（768px未満）の時は、誤遷移を防いで全タイトルをしっかり見せるために、ポップオーバー一覧をトグルするわね♡
+    if (window.innerWidth < 768) {
+      setIsOpen(!isOpen);
+    } else {
+      // PCならホバーでツールチップが見えるから、クリックで即レポートへジャンプよ♡
+      handleClick(id);
+    }
+  };
+
   // リポジトリ名の抽出
   const getRepoName = (repo: any) => {
     if (!repo) return "";
@@ -164,7 +175,7 @@ export default function ShareFeedTicker({ lang }: ShareFeedTickerProps) {
       <div 
         className="flex items-center justify-between p-1.5 px-3.5 rounded-full border border-indigo-200/50 bg-gradient-to-r from-indigo-50/70 via-white/95 to-purple-50/70 backdrop-blur-md shadow-xs dark:from-slate-900/80 dark:via-slate-900/95 dark:to-slate-900/80 dark:border-indigo-900/40 hover:border-indigo-300 transition-all duration-300"
         id="share-feed-ticker"
-        title={displayTitle} // マウスホバーでタイトル全貌が見えるようにツールチップを仕込んだわ♡
+        title={displayTitle} // PCホバー用
       >
         {/* 左：新着バッジ */}
         <div className="flex items-center space-x-1.5 shrink-0 mr-2">
@@ -178,7 +189,7 @@ export default function ShareFeedTicker({ lang }: ShareFeedTickerProps) {
 
         {/* 中央：自動スライドアニメーション表示 */}
         <div 
-          onClick={() => handleClick(currentItem.id)}
+          onClick={() => handleTickerClick(currentItem.id)}
           className={`flex-1 overflow-hidden cursor-pointer mr-2 transition-all duration-300 transform ${
             animate ? "translate-y-0 opacity-100" : "-translate-y-2 opacity-0"
           }`}
@@ -232,7 +243,6 @@ export default function ShareFeedTicker({ lang }: ShareFeedTickerProps) {
                     idx === currentIndex ? "bg-indigo-50/40 dark:bg-slate-800/40 border-indigo-150/40" : ""
                   }`}
                 >
-                  {/* リスト側は truncate させず、全部折り返して表示（whitespace-normal）するから見栄えを損ねないわよ♡ */}
                   <div className="flex items-start space-x-2 overflow-hidden flex-1 mr-2 pt-0.5">
                     <ArrowRight className="w-3.5 h-3.5 text-indigo-400 group-hover:translate-x-0.5 transition-transform shrink-0 mt-0.5" />
                     <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 whitespace-normal break-words group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors leading-relaxed">
