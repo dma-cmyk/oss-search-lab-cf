@@ -164,6 +164,7 @@ export default function ShareFeedTicker({ lang }: ShareFeedTickerProps) {
       <div 
         className="flex items-center justify-between p-1.5 px-3.5 rounded-full border border-indigo-200/50 bg-gradient-to-r from-indigo-50/70 via-white/95 to-purple-50/70 backdrop-blur-md shadow-xs dark:from-slate-900/80 dark:via-slate-900/95 dark:to-slate-900/80 dark:border-indigo-900/40 hover:border-indigo-300 transition-all duration-300"
         id="share-feed-ticker"
+        title={displayTitle} // マウスホバーでタイトル全貌が見えるようにツールチップを仕込んだわ♡
       >
         {/* 左：新着バッジ */}
         <div className="flex items-center space-x-1.5 shrink-0 mr-2">
@@ -227,17 +228,18 @@ export default function ShareFeedTicker({ lang }: ShareFeedTickerProps) {
                 <div
                   key={item.id}
                   onClick={() => handleClick(item.id)}
-                  className={`flex items-center justify-between p-1.5 px-2 rounded-xl border border-transparent hover:border-indigo-200/50 hover:bg-indigo-50/30 dark:hover:bg-slate-800/80 cursor-pointer transition-all group ${
+                  className={`flex items-start justify-between p-1.5 px-2 rounded-xl border border-transparent hover:border-indigo-200/50 hover:bg-indigo-50/30 dark:hover:bg-slate-800/80 cursor-pointer transition-all group ${
                     idx === currentIndex ? "bg-indigo-50/40 dark:bg-slate-800/40 border-indigo-150/40" : ""
                   }`}
                 >
-                  <div className="flex items-center space-x-2 overflow-hidden flex-1 mr-2">
-                    <ArrowRight className="w-3 h-3 text-indigo-400 group-hover:translate-x-0.5 transition-transform shrink-0" />
-                    <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                  {/* リスト側は truncate させず、全部折り返して表示（whitespace-normal）するから見栄えを損ねないわよ♡ */}
+                  <div className="flex items-start space-x-2 overflow-hidden flex-1 mr-2 pt-0.5">
+                    <ArrowRight className="w-3.5 h-3.5 text-indigo-400 group-hover:translate-x-0.5 transition-transform shrink-0 mt-0.5" />
+                    <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 whitespace-normal break-words group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors leading-relaxed">
                       {dTitle}
                     </span>
                   </div>
-                  <span className="text-[9px] text-slate-400 font-semibold shrink-0 ml-2">
+                  <span className="text-[9px] text-slate-400 font-semibold shrink-0 ml-2 pt-0.5">
                     {getRelativeTime(item.timestamp)}
                   </span>
                 </div>
