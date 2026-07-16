@@ -47,6 +47,7 @@ import RepoDetailView from "./components/RepoDetailView";
 import SearchHeader from "./components/SearchHeader";
 import SettingsModal from "./components/SettingsModal";
 import MagazineView from "./components/MagazineView";
+import ShareFeedTicker from "./components/ShareFeedTicker";
 
 const migrateToArticlesStructure = (reports: any[]): SavedReport[] => {
   const newReportsMap: Record<string, SavedReport> = {};
@@ -1992,6 +1993,9 @@ export default function App() {
 
                 return (
                   <div className="space-y-6" id="showcase-repos-view">
+                    {/* 新着共有記事のリアルタイムフィードティッカーよ♡ */}
+                    <ShareFeedTicker lang={resolvedLang} />
+
                     {/* Search and Sort Controls */}
                     <div className="flex flex-col sm:flex-row items-center gap-4 bg-slate-50 border border-slate-150 rounded-2xl p-4" id="showcase-controls">
                       {/* Search Input */}

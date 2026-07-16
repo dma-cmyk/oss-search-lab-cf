@@ -3211,6 +3211,33 @@ app.get("/api/share/list", async (req, res) => {
   }
 });
 
+// 4. 新着の共有フィードAPI（軽量・高速取得）よ♡
+app.get("/api/share/feed", async (req, res) => {
+  try {
+    // CDNキャッシュを10秒間有効化してエッジで超高速に返すのよ♡
+    res.setHeader("Cache-Control", "public, max-age=10, s-maxage=10");
+
+    const content = await readShareFile("shares_index.json");
+    if (!content) {
+      return res.json([]);
+    }
+    
+    let indexList: any[] = [];
+    try {
+      indexList = JSON.parse(content);
+    } catch (e) {
+      return res.json([]);
+    }
+
+    // 先頭の8件（新着）だけをスライスして軽量に返すわ♡
+    const feedList = indexList.slice(0, 8);
+    return res.json(feedList);
+  } catch (error) {
+    console.error("Failed to read share feed:", error);
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
 let server: any;
 let handler: any;
 
