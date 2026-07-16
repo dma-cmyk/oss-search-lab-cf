@@ -32,10 +32,7 @@ remove_search_fallback.cjs
 run-update.js
 .venus-vault/
 
-# Monitoring auto-generated files
-monitoring/feedback-config.json
-monitoring/processed-feedbacks.json
-monitoring/classified-feedbacks.json
-monitoring/cron-run.log
+# Monitoring directory
+monitoring/
 .wrangler/
 shares/
